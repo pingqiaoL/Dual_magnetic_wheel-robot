@@ -1,0 +1,32 @@
+# Downloaded upstream sources
+/upstream/nuttx/
+/upstream/apps/
+/upstream/.cache/
+/upstream/*.download-*/
+/upstream/*.extract-*/
+
+# Build outputs
+/build/*
+!/build/.gitkeep
+/artifacts/*
+!/artifacts/.gitkeep
+/tools/host/kconfig-frontends/
+/platform/dji_cboard/src/etc_romfs.c
+__pycache__/
+*.pyc
+
+# Editors and host tools
+.vscode/
+.idea/
+*.swp
+*.user
+Thumbs.db
+.DS_Store
+
+# NuttX generated configuration/build files if a source tree is inspected
+.config
+.config.old
+nuttx
+nuttx.bin
+nuttx.hex
+nuttx.map

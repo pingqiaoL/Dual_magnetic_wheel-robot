@@ -1,0 +1,15 @@
+#! /bin/nsh
+
+echo "Starting CBoard robot runtime"
+robot start
+
+echo "Starting RC channel processing"
+rc_update start
+
+echo "Starting MK32 SBUS input"
+sbus_input start -d /dev/ttyS2
+
+echo "Starting Climbot configuration"
+source /etc/robots/climbot.sh
+
+robot ready

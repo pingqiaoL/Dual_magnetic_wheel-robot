@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_DJI_CBOARD
+	bool
+	default y
+	help
+		DJI RoboMaster Development Board Type C (STM32F407IGH6).

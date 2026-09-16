@@ -1,0 +1,46 @@
+# 本文件配置 robot 内置命令的开关、名称、优先级和命令线程栈大小。
+menu "CBoard robot applications"
+
+config CBOARD_ROBOT
+	bool "Robot runtime command"
+	default y
+	---help---
+		Build the reusable robot module lifecycle command.
+
+if CBOARD_ROBOT
+
+config CBOARD_ROBOT_PROGNAME
+	string "Robot command name"
+	default "robot"
+
+config CBOARD_ROBOT_PRIORITY
+	int "Robot command priority"
+	default 100
+
+config CBOARD_ROBOT_STACKSIZE
+	int "Robot command stack size"
+	default 2048
+
+config CBOARD_SBUS_INPUT_PROGNAME
+	string "SBUS input command name"
+	default "sbus_input"
+
+config CBOARD_RC_UPDATE_PROGNAME
+	string "RC update command name"
+	default "rc_update"
+
+config CBOARD_PARAM_PROGNAME
+	string "Parameter command name"
+	default "param"
+
+config CBOARD_CONTROL_ALLOCATOR_PROGNAME
+	string "Control allocator command name"
+	default "control_allocator"
+
+config CBOARD_CAN_OUTPUT_PROGNAME
+	string "CAN output command name"
+	default "can_output"
+
+endif
+
+endmenu

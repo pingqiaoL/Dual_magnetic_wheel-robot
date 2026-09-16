@@ -1,0 +1,4 @@
+# 启用 CONFIG_CBOARD_ROBOT 后，将本目录加入 NuttX 应用构建。
+ifneq ($(CONFIG_CBOARD_ROBOT),)
+CONFIGURED_APPS += $(APPDIR)/cboard
+endif
