@@ -1,0 +1,9 @@
+#! /bin/nsh
+# Add one numbered profile and one branch for each new robot.
+if param compare SYS_AUTOSTART 1
+then
+  source /etc/robots/1_dual_magneticwheel
+else
+  echo "ERROR: unsupported SYS_AUTOSTART; outputs remain disabled"
+  false
+fi

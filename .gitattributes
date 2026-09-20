@@ -5,3 +5,10 @@
 *.hpp text eol=lf
 *.md text eol=lf
 *.ps1 text eol=crlf
+*.py text eol=lf
+Kconfig text eol=lf
+Makefile text eol=lf
+Make.defs text eol=lf
+startup/etc/** text eol=lf
+*.msg text eol=lf
+.gitattributes text eol=lf

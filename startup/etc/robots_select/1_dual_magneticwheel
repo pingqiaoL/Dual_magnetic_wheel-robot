@@ -1,6 +1,7 @@
 #! /bin/nsh
 
-# Climbot actuator allocation defaults.
+# SYS_AUTOSTART=1: dual magnetic wheel defaults.
+param set CA_AIRFRAME 1
 param set-default CA_THR_F 1.0
 param set-default CA_THR_R 1.0
 param set-default CA_YAW_F 1.0
@@ -25,5 +26,3 @@ param set-default CAN_S1_TYPE 1
 param set-default CAN_S1_MODE 2
 param set-default CAN_S1_PFBMAX 12.5
 
-control_allocator start -c climbot
-can_output start -d /dev/can0

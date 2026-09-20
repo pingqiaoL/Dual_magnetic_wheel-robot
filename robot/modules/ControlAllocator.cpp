@@ -1,200 +1,144 @@
-/**
- * @file ControlAllocator.cpp
- * @brief 实现低频轮式机器人使用的独立控制分配线程。
+/** @file ControlAllocator.cpp
+ * @brief 创建构型子类、更新分配矩阵并周期发布电机与舵机目标。
  */
-
+#ifdef main
+#undef main
+#endif
 #include "robot/modules/ControlAllocator.hpp"
-
-#include "robot/os/Clock.hpp"
+#include "robot/control/ActuatorEffectivenessDualMagneticWheel.hpp"
 #include "robot/params/ParamManager.hpp"
-
+#include "robot/os/Clock.hpp"
 #include <stdio.h>
+#include <string.h>
 
-/** 绑定手动控制、开关、参数和两类执行器 topic。 */
-ControlAllocator::ControlAllocator()
-    : _manualSubscription(manualControlTopic()),
-      _switchSubscription(manualControlSwitchesTopic()),
-      _parameterSubscription(parameterUpdateTopic()),
-      _motorsPublication(actuatorMotorsTopic()),
-      _servosPublication(actuatorServosTopic()),
-      _armSwitch(1),
-      _allocationCount(0),
-      _lastArmWarning(0),
-      _haveManual(false),
-      _haveSwitches(false),
-      _armed(false)
+/** 模型归模块所有；Allocation只引用同一个模型，不再复制构型信息。 */
+ControlAllocator::ControlAllocator(int32_t modelId, ActuatorEffectiveness *effectiveness)
+  : _modelId(modelId), _effectiveness(effectiveness), _allocation(*effectiveness),
+    _manualSubscription(manualControlTopic()),
+    _parameterSubscription(parameterUpdateTopic()),
+    _motorsPublication(actuatorMotorsTopic()),
+    _servosPublication(actuatorServosTopic())
 {
-  (void)updateParameters();
+  updateParameters();
 }
 
-/** 创建 control_allocator 独立任务。 */
+/** 释放已退出任务持有的构型对象。 */
+ControlAllocator::~ControlAllocator()
+{
+  delete _effectiveness;
+}
+
+/** 将模块主循环交给独立NuttX任务。 */
 int ControlAllocator::task_spawn(int argc, char *argv[])
 {
-  const int taskId = os::Task::spawn("control_allocator", 105, 4096,
-                                     &run_trampoline, argc, argv);
-  if (taskId < 0)
-    {
-      __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
-      return -1;
-    }
-
-  __atomic_store_n(&_taskId, taskId, __ATOMIC_RELEASE);
-  return wait_until_running();
+  const int id = os::Task::spawn("control_allocator", 105, 4096,
+                               &run_trampoline, argc, argv);
+  __atomic_store_n(&_taskId, id < 0 ? -1 : id, __ATOMIC_RELEASE);
+  return id < 0 ? -1 : wait_until_running();
 }
 
-/** 第一版仅接受 climbot 构型，后续增加机型时在此创建相应子类。 */
+/** 每个编号对应一个构型子类，不支持的编号拒绝启动。 */
+ActuatorEffectiveness *ControlAllocator::createEffectiveness(int32_t modelId)
+{
+  switch (modelId)
+    {
+      case 1: return new ActuatorEffectivenessDualMagneticWheel();
+      default:
+        fprintf(stderr, "unsupported CA_AIRFRAME: %ld\n", static_cast<long>(modelId));
+        return nullptr;
+    }
+}
+
+/** 模型编号由参数决定；旧-c climbot只用于检查兼容性。 */
 ControlAllocator *ControlAllocator::instantiate(int argc, char *argv[])
 {
-  for (int index = 0; index < argc; ++index)
+  int32_t modelId = 0;
+  if (!ParamManager::instance().get("CA_AIRFRAME", modelId)) { return nullptr; }
+  for (int index = 1; index < argc; ++index)
     {
-      if (argv[index] != nullptr && argv[index][0] == '-' &&
-          argv[index][1] == 'c' && index + 1 < argc &&
-          strcmp(argv[index + 1], "climbot") != 0)
-        {
-          fprintf(stderr, "unsupported robot configuration: %s\n",
-                  argv[index + 1]);
-          return nullptr;
-        }
+      if (strcmp(argv[index], "-c") != 0 || index + 1 >= argc ||
+          strcmp(argv[++index], "climbot") != 0 || modelId != 1)
+        { print_usage("unsupported configuration option"); return nullptr; }
     }
-  return new ControlAllocator();
+  ActuatorEffectiveness *effectiveness = createEffectiveness(modelId);
+  if (effectiveness == nullptr) { return nullptr; }
+  ControlAllocator *module = new ControlAllocator(modelId, effectiveness);
+  if (module == nullptr) { delete effectiveness; }
+  return module;
 }
 
-/** 当前没有额外命令。 */
-int ControlAllocator::custom_command(int argc, char *argv[])
-{
-  (void)argc;
-  (void)argv;
-  return print_usage("unknown command");
-}
-
-/** 打印任务启动和状态命令。 */
+/** 打印生命周期命令和模型选择参数。 */
 int ControlAllocator::print_usage(const char *reason)
 {
-  if (reason != nullptr)
-    {
-      fprintf(stderr, "%s\n", reason);
-    }
+  if (reason != nullptr) { fprintf(stderr, "%s\n", reason); }
   printf("usage: control_allocator {start [-c climbot]|stop|status}\n");
+  printf("model selection: CA_AIRFRAME (1=dual_magneticwheel)\n");
   return reason == nullptr ? 0 : -1;
 }
 
-/** 显示构型、分配次数和当前解锁状态。 */
+/** 状态读取与分配参数刷新使用同一个状态锁。 */
 int ControlAllocator::print_status()
 {
-  printf("running\n");
-  printf("configuration: %s\n", _configuration.name());
-  printf("motors/servos: %u/%u\n", _configuration.motorCount(),
-         _configuration.servoCount());
-  printf("arm switch: %ld\n", static_cast<long>(_armSwitch));
-  printf("arm switch position: %u\n",
-         static_cast<unsigned>(armSwitchPosition()));
-  printf("arm safety: %s\n", _armSafety.stateName());
-  printf("armed: %s\n", _armed ? "yes" : "no");
-  printf("allocations: %lu\n", static_cast<unsigned long>(_allocationCount));
+  os::LockGuard guard(_stateMutex);
+  if (!guard.locked()) { return -1; }
+  printf("running\nconfiguration: %s\nCA_AIRFRAME: %ld\n",
+         _effectiveness->name(), static_cast<long>(_modelId));
+  printf("motors/servos: %u/%u\nmodel valid: %s\nallocations: %lu\n",
+         _effectiveness->motorCount(), _effectiveness->servoCount(),
+         _modelValid ? "yes" : "no", static_cast<unsigned long>(_allocationCount));
+  printf("arming status: use command status\n");
   return 0;
 }
 
-/** 以 50 Hz 检查新输入；任何输入或参数变化都会重新发布执行器输出。 */
+/** 运行中改变编号先发布无效输出，停止并重新启动模块才创建新模型。 */
+void ControlAllocator::updateParameters()
+{
+  int32_t selected = 0;
+  const bool match = ParamManager::instance().get("CA_AIRFRAME", selected) &&
+                     selected == _modelId;
+  if (!match && _modelValid)
+    { printf("WARNING [control_allocator] model changed; restart allocator\n"); }
+  _modelValid = match && _allocation.updateParameters();
+}
+
+/** 本任务只计算发布，解锁判断属于command和MixingOutput。 */
 void ControlAllocator::run()
 {
   while (!should_exit())
     {
-      bool changed = false;
-      ParameterUpdate parameterUpdate;
-      if (_parameterSubscription.update(parameterUpdate))
-        {
-          (void)updateParameters();
-          changed = true;
-        }
-
-      if (_manualSubscription.update(_manual))
-        {
-          _haveManual = true;
-          changed = true;
-        }
-
-      if (_switchSubscription.update(_switches))
-        {
-          _haveSwitches = true;
-          changed = true;
-        }
-
-      if (changed)
-        {
-          _armed = updateArmState();
-          ActuatorMotors motors{};
-          ActuatorServos servos{};
-          _allocation.allocate(_manual, _armed, motors, servos);
-          const uint64_t now = os::Clock::nowMicroseconds();
-          motors.timestamp = now;
-          servos.timestamp = now;
-          (void)_motorsPublication.publish(motors);
-          (void)_servosPublication.publish(servos);
-          ++_allocationCount;
-        }
-
-      warnIfArmSwitchUnsafe(os::Clock::nowMicroseconds());
-
+      {
+        os::LockGuard guard(_stateMutex);
+        if (guard.locked())
+          {
+            ParameterUpdate update{};
+            if (_parameterSubscription.update(update)) { updateParameters(); }
+            (void)_manualSubscription.update(_manual);
+            const uint64_t now = os::Clock::nowMicroseconds();
+            ManualControl input = _manual;
+            input.valid = input.valid && _modelValid && input.timestampSample != 0 &&
+                          input.timestampSample <= now &&
+                          now - input.timestampSample <= 500000ULL;
+            ActuatorMotors motors{};
+            ActuatorServos servos{};
+            _allocation.allocate(input, motors, servos);
+            motors.timestamp = servos.timestamp = now;
+            (void)_motorsPublication.publish(motors);
+            (void)_servosPublication.publish(servos);
+            ++_allocationCount;
+          }
+      }
       os::Clock::sleepMilliseconds(20);
     }
+  // 退出立即发布无效输出，避免等待缓存超时才停止驱动。
+  ActuatorMotors motors{};
+  ActuatorServos servos{};
+  motors.timestamp = servos.timestamp = os::Clock::nowMicroseconds();
+  (void)_motorsPublication.publish(motors);
+  (void)_servosPublication.publish(servos);
 }
 
-/** 返回 CA_ARM_SW 对应的位置；开关编号从 1 开始。 */
-uint8_t ControlAllocator::armSwitchPosition() const
+/** NSH入口转交模板父类管理生命周期。 */
+extern "C" int control_allocator_main(int argc, char *argv[])
 {
-  if (!_haveSwitches || !_switches.valid || _armSwitch <= 0 ||
-      _armSwitch > _switches.switchCount)
-    {
-      return ManualControlSwitches::POSITION_NONE;
-    }
-
-  return _switches.positions[_armSwitch - 1];
-}
-
-/** 遥控有效时更新SA电平；信号丢失只失能，不重复上电互锁。 */
-bool ControlAllocator::updateArmState()
-{
-  const bool valid = _haveManual && _haveSwitches && _manual.valid &&
-                     _switches.valid;
-  return _armSafety.update(valid, armSwitchPosition());
-}
-
-/** 每五秒在控制台提示一次未通过上电安全检查的 SA 开关。 */
-void ControlAllocator::warnIfArmSwitchUnsafe(uint64_t now)
-{
-  const uint8_t position = armSwitchPosition();
-  if (!_armSafety.waitingForOff() ||
-      position == ManualControlSwitches::POSITION_NONE ||
-      position == ManualControlSwitches::POSITION_OFF)
-    {
-      return;
-    }
-
-  if (_lastArmWarning == 0 ||
-      now - _lastArmWarning >= ArmWarningIntervalMicroseconds)
-    {
-      printf("WARNING [control_allocator] SA switch %ld is not OFF; "
-             "set SA OFF before arming\n",
-             static_cast<long>(_armSwitch));
-      _lastArmWarning = now;
-    }
-}
-
-/** 同时刷新算法系数和第几个遥控开关用于解锁。 */
-bool ControlAllocator::updateParameters()
-{
-  int32_t armSwitch = 1;
-  const bool allocationValid = _allocation.updateParameters();
-  const bool switchValid = ParamManager::instance().get("CA_ARM_SW", armSwitch);
-  if (switchValid)
-    {
-      if (_armSwitch != armSwitch)
-        {
-          _armSafety.reset();
-          _armed = false;
-          _lastArmWarning = 0;
-        }
-      _armSwitch = armSwitch;
-    }
-  return allocationValid && switchValid;
+  return ControlAllocator::main(argc, argv);
 }

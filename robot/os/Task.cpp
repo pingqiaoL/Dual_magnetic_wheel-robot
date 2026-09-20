@@ -5,7 +5,7 @@
 
 #include "robot/os/Task.hpp"
 
-#include <sched.h>
+#include <sched.h>//包含nuttx的线程头文件
 
 namespace os
 {

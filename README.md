@@ -12,12 +12,18 @@ Step 3 adds a header-only CRTP `ModuleBase<T>` modeled after the supplied PX4 mo
 
 Step 4 adds the MK32 SBUS receive chain through `rc_update`: USART3 SBUS decoding publishes `input_rc`; a lightweight uORB bus decouples the tasks; calibration, reversal, deadzone and channel mapping produce normalized `rc_channels`, `manual_control` and `manual_control_switches` topics.
 
-Step 6 adds the Climbot actuator chain: `control_allocator` publishes
-`actuator_motors` and `actuator_servos`; `can_output` selects the configured
-CAN motor protocol and uses the NuttX `/dev/can0` character driver. The first
-protocol implementation supports Damiao velocity and position-velocity modes,
-management frames, and feedback decoding. Output requires both the RC arm
-switch and the explicit `can_output enable` NSH command.
+Step 6 provides the numbered `SYS_AUTOSTART` profile and a `CA_AIRFRAME`
+factory for `ActuatorEffectiveness` models. `control_allocator` computes
+parameterized motor/steering targets. `command` owns the RC safety interlock
+and publishes `actuator_armed`; all module extension commands are dispatched
+by `CommandRouter`. `CanOutput` owns `MixingOutput`, which checks safety and
+freshness and calls the driver's virtual `updateOutputs` method. Damiao CAN
+uses the NuttX `/dev/can0` character driver. After one valid switch OFF
+observation, switch ON arms automatically. An explicit enable command is
+only needed to clear a manual output inhibit.
+
+See [the actuator framework guide](docs/step6-damiao-motor-framework.md)
+for file roles, startup order, NSH commands and adding a new model.
 
 ## Quick start
 
@@ -50,11 +56,13 @@ The build command configures `dji_cboard:robot`, builds NuttX, and copies user-f
 
 ## Source ownership
 
-- `upstream/` contains downloaded Apache NuttX sources and is not edited as project source.
+- `upstream/` contains disposable Apache sources; tracked tools apply the pinned NSH EOF compatibility fix during builds.
 - `platform/dji_cboard/` is the canonical custom-board BSP source.
 - `robot/` contains reusable OS-independent C++ robot code.
-- `apps/` contains NSH module entry points and startup integration.
-- `startup/` contains the planned `rcS` startup scripts.
+- NSH module entry points are at the end of their implementation files.
+- `robot/params/param_main.cpp` contains the standalone parameter command.
+- `config/nuttx/` contains the NuttX application build integration.
+- `startup/` contains `rcS`, `rc.autostart` and numbered robot profiles.
 - `config/` records project-wide resource and version decisions.
 
 See `docs/development-baseline.md`, `docs/hardware-resource-map.md`,

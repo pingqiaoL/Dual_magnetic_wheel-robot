@@ -1,7 +1,10 @@
 #! /bin/nsh
-
+# A failed command stops this script before safety management starts.
 echo "Starting CBoard robot runtime"
 robot start
+
+echo "Selecting numbered robot profile"
+source /etc/init.d/rc.autostart
 
 echo "Starting RC channel processing"
 rc_update start
@@ -9,7 +12,12 @@ rc_update start
 echo "Starting MK32 SBUS input"
 sbus_input start -d /dev/ttyS2
 
-echo "Starting Climbot configuration"
-source /etc/robots/climbot.sh
+echo "Starting control allocation"
+control_allocator start
 
+echo "Starting CAN output"
+can_output start -d /dev/can0
+
+echo "Starting RC safety management"
+command start
 robot ready

@@ -10,6 +10,10 @@
 - `RcChannels.msg`：经过校准和归一化的通道及功能映射。
 - `ManualControl.msg`：上层使用的四轴手动输入。
 - `ManualControlSwitches.msg`：上层使用的十二路开关状态。
+- `ActuatorArmed.msg`：command发布的唯一解锁、有效性和手动禁止信息。
+- `ActuatorMotors.msg`、`ActuatorServos.msg`：分配器发布的两类归一化目标。
+- `ActuatorStatus.msg`：CAN电机反馈。
+- `ParameterUpdate.msg`：参数修改或保存通知。
 
 新增 topic 时，只需在这里增加 `.msg` 文件，再在 `robot/orb/Topics.hpp`
 和 `Topics.cpp` 中声明并创建对应的唯一 topic 实例。

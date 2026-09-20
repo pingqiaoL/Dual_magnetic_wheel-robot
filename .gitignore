@@ -30,3 +30,7 @@ nuttx
 nuttx.bin
 nuttx.hex
 nuttx.map
+
+# Project-owned NuttX application build integration
+!/config/nuttx/
+!/config/nuttx/**

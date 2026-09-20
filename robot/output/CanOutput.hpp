@@ -11,6 +11,7 @@
 #include "robot/orb/Topics.hpp"
 #include "robot/os/Mutex.hpp"
 #include "robot/output/OutputInterface.hpp"
+#include "robot/output/MixingOutput.hpp"
 
 #include <stdint.h>
 
@@ -38,7 +39,8 @@ public:
 
   static int task_spawn(int argc, char *argv[]);
   static CanOutput *instantiate(int argc, char *argv[]);
-  static int custom_command(int argc, char *argv[]);
+  /** 返回统一命令路由使用的固定模块名称。 */
+  static const char *command_name() { return "can_output"; }
   static int print_usage(const char *reason = nullptr);
 
   bool init() override;
@@ -49,6 +51,14 @@ public:
   void run() override;
 
 private:
+  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
+  friend class CommandRouter;
+  /** 协议编码前再次保护归一化数值范围。 */
+  static float constrainUnit(float value);
+  /** 将协议枚举转换为NSH显示名称。 */
+  static const char *protocolName(CanProtocol protocol);
+  /** 将达妙模式枚举转换为NSH显示名称。 */
+  static const char *modeName(DamiaoMode mode);
   static constexpr uint8_t MotorCount = 2;
   static constexpr uint8_t ServoCount = 2;
   static constexpr uint8_t ChannelCount = MotorCount + ServoCount;
@@ -92,16 +102,17 @@ private:
   CanChannelConfig _channels[ChannelCount];
   os::Mutex _configurationMutex;
   os::Mutex _writeMutex;
-  uorb::Subscription<ActuatorMotors> _motorsSubscription;
-  uorb::Subscription<ActuatorServos> _servosSubscription;
+  /** 串行化解锁/失锁及NSH设零操作，避免管理帧之间的竞争。 */
+  os::Mutex _outputMutex;
+  /** 拥有公共处理器，构造时传入本驱动的*this供虚函数回调。 */
+  MixingOutput _mixingOutput;
   uorb::Subscription<ParameterUpdate> _parameterSubscription;
   uorb::Publication<ActuatorStatus> _statusPublication;
-  ActuatorMotors _motors;
-  ActuatorServos _servos;
   ActuatorStatus _status;
   uint64_t _lastStatusPublish;
-  bool _haveMotors;
-  bool _haveServos;
-  bool _operatorEnabled;
+  bool _parametersValid;
+  bool _reloadPending{false};
+  /** 初次运行也必须下发失能，不能假定电机随MCU复位而失能。 */
+  bool _disablePending{true};
   bool _protocolArmed;
 };

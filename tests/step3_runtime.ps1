@@ -17,10 +17,10 @@ $requiredFiles = @(
     'robot\os\Clock.cpp',
     'robot\modules\RobotRuntime.hpp',
     'robot\modules\RobotRuntime.cpp',
-    'apps\cboard\Kconfig',
-    'apps\cboard\Make.defs',
-    'apps\cboard\Makefile',
-    'apps\cboard\robot_main.cpp',
+    'config\nuttx\Kconfig',
+    'config\nuttx\Make.defs',
+    'config\nuttx\Makefile',
+    'robot\modules\RobotRuntime.cpp',
     'startup\etc\init.d\rcS',
     'startup\etc\init.d\rc.sysinit',
     'tools\generate_romfs.py'
@@ -47,9 +47,30 @@ foreach ($setting in @(
 }
 
 $robotMain = Get-Content -LiteralPath (
-    Join-Path $projectRoot 'apps\cboard\robot_main.cpp') -Raw
+    Join-Path $projectRoot 'robot\modules\RobotRuntime.cpp') -Raw
 if ($robotMain -notmatch 'RobotRuntime::main\(argc, argv\)') {
     throw 'robot command does not delegate to the CRTP ModuleBase entry.'
+}
+
+# 模块入口必须与实现同文件，且工程不再保留独立apps目录。
+if (Test-Path -LiteralPath (Join-Path $projectRoot 'apps')) {
+    throw 'Project-owned apps directory must be removed.'
+}
+$moduleEntries = @{
+    'robot\modules\RobotRuntime.cpp' = 'robot_main'
+    'robot\modules\SbusInput.cpp' = 'sbus_input_main'
+    'robot\modules\RcUpdate.cpp' = 'rc_update_main'
+    'robot\modules\ControlAllocator.cpp' = 'control_allocator_main'
+    'robot\modules\Command.cpp' = 'command_main'
+    'robot\output\CanOutput.cpp' = 'can_output_main'
+}
+foreach ($file in $moduleEntries.Keys) {
+    $source = Get-Content -LiteralPath (Join-Path $projectRoot $file) -Raw
+    $entry = [regex]::Escape($moduleEntries[$file])
+    if ($source -notmatch ('extern "C" int ' + $entry +
+            '\(int argc, char \*argv\[\]\)\s*\{[^}]+\}\s*$')) {
+        throw "Module entry is missing from the end of: $file"
+    }
 }
 
 $moduleBase = Get-Content -LiteralPath (
@@ -58,7 +79,7 @@ foreach ($requiredPattern in @(
     'template<class T>',
     'T::task_spawn',
     'T::instantiate',
-    'T::custom_command',
+    'CommandRouter::dispatch',
     'T::print_usage'
 )) {
     if ($moduleBase -notmatch [regex]::Escape($requiredPattern)) {

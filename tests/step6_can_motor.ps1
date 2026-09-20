@@ -10,40 +10,46 @@ New-Item -ItemType Directory -Force -Path $testDirectory | Out-Null
 
 $rcS = Get-Content -LiteralPath (
     Join-Path $projectRoot 'startup\etc\init.d\rcS') -Raw
-if ($rcS -notmatch [regex]::Escape('source /etc/robots/climbot.sh')) {
-    throw 'rcS must source the robot configuration in the current NSH.'
-}
-if ($rcS -notmatch [regex]::Escape('robot ready')) {
-    throw 'rcS must mark module initialization complete.'
-}
-
-$configurationScript = Get-Content -LiteralPath (
-    Join-Path $projectRoot 'startup\etc\robots\climbot.sh') -Raw
-foreach ($command in @('control_allocator start -c climbot',
-        'can_output start -d /dev/can0')) {
-    if ($configurationScript -notmatch [regex]::Escape($command)) {
-        throw "Climbot startup is missing command: $command"
+foreach ($command in @('source /etc/init.d/rc.autostart',
+        'control_allocator start', 'can_output start -d /dev/can0',
+        'command start', 'robot ready')) {
+    if ($rcS -notmatch [regex]::Escape($command)) {
+        throw "rcS is missing command: $command"
     }
 }
-
-# NSH defaults to a short line buffer.  Check UTF-8 byte length because a
-# truncated comment continues on the next read and is then parsed as a command.
-$configurationPath = Join-Path $projectRoot 'startup\etc\robots\climbot.sh'
-$lineNumber = 0
-Get-Content -LiteralPath $configurationPath | ForEach-Object {
-    ++$lineNumber
-    $byteCount = [Text.Encoding]::UTF8.GetByteCount($_)
-    if ($byteCount -gt 72) {
-        throw "Climbot startup line $lineNumber is $byteCount UTF-8 bytes; maximum is 72."
+$selector = Get-Content -LiteralPath (
+    Join-Path $projectRoot 'startup\etc\init.d\rc.autostart') -Raw
+foreach ($command in @('param compare SYS_AUTOSTART 1',
+        'source /etc/robots/1_dual_magneticwheel')) {
+    if ($selector -notmatch [regex]::Escape($command)) {
+        throw "Profile selector is missing: $command"
     }
 }
+$profile = Get-Content -LiteralPath (
+    Join-Path $projectRoot 'startup\etc\robots\1_dual_magneticwheel') -Raw
+if ($profile -notmatch 'param set CA_AIRFRAME 1') {
+    throw 'Numbered profile must select its actuator model.'
+}
+# NSH短行缓冲区按UTF-8字节检查，避免注释截断后当成命令执行。
+Get-ChildItem -LiteralPath (Join-Path $projectRoot 'startup\etc') -Recurse -File |
+    ForEach-Object {
+        $script = $_
+        $lineNumber = 0
+        Get-Content -LiteralPath $script.FullName | ForEach-Object {
+            ++$lineNumber
+            $byteCount = [Text.Encoding]::UTF8.GetByteCount($_)
+            if ($byteCount -gt 72) {
+                throw "$($script.Name):$lineNumber has $byteCount bytes; max 72."
+            }
+        }
+    }
 
 & python (Join-Path $projectRoot 'tools\generate_messages.py') `
     --input (Join-Path $projectRoot 'msg') --output $generated
 if ($LASTEXITCODE -ne 0) { throw 'uORB message generation failed.' }
 
 foreach ($header in @('ActuatorMotors.hpp', 'ActuatorServos.hpp',
-        'ActuatorStatus.hpp')) {
+        'ActuatorStatus.hpp', 'ActuatorArmed.hpp')) {
     if (-not (Test-Path -LiteralPath (Join-Path $generated $header))) {
         throw "Generated message is missing: $header"
     }
@@ -53,6 +59,9 @@ $msysBash = 'C:\msys64\usr\bin\bash.exe'
 if (-not (Test-Path -LiteralPath $msysBash)) {
     throw "MSYS2 bash was not found: $msysBash"
 }
+
+& python (Join-Path $projectRoot 'tests\prepare_nsh_eof_test.py')
+if ($LASTEXITCODE -ne 0) { throw 'NSH EOF regression fixture preparation failed.' }
 
 $env:CBOARD_CAN_TEST_ROOT = $projectRoot
 $command = @'
@@ -65,11 +74,34 @@ g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
 ./build/tests/damiao_protocol_test.exe
 
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
-  tests/climbot_allocation_test.cpp robot/control/ClimbotAllocation.cpp \
+  tests/climbot_allocation_test.cpp robot/control/Allocation.cpp \
+  robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
   robot/params/ParamManager.cpp robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
   -o build/tests/climbot_allocation_test.exe
 ./build/tests/climbot_allocation_test.exe
+
+g++ -std=c++14 -Wall -Wextra -Werror \
+  -I"$root/build/generated" -I"$root" \
+  tests/output_chain_test.cpp robot/modules/Command.cpp \
+  robot/output/MixingOutput.cpp robot/control/Allocation.cpp \
+  robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
+  robot/params/ParamManager.cpp robot/orb/Topics.cpp \
+  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  -o build/tests/output_chain_test.exe
+./build/tests/output_chain_test.exe
+
+g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
+  tests/param_command_test.cpp robot/params/param_main.cpp \
+  robot/params/ParamManager.cpp robot/orb/Topics.cpp \
+  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  -o build/tests/param_command_test.exe
+./build/tests/param_command_test.exe
+
+gcc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -I"$root/build/tests/nsh_eof" \
+  tests/nsh_script_eof_test.c build/tests/nsh_eof/nshlib/nsh_script.c \
+  -o build/tests/nsh_script_eof_test.exe
+./build/tests/nsh_script_eof_test.exe
 '@
 
 & $msysBash --login -c $command
@@ -77,4 +109,4 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Step 6 host compile or execution test failed.'
 }
 
-Write-Host '[PASS] Step 6 Damiao protocol and Climbot allocation are complete.'
+Write-Host '[PASS] Step 6 Damiao, matrix allocation, command safety and mixing output are complete.'

@@ -6,14 +6,34 @@
 #include "robot/params/ParamSystem.hpp"
 
 #include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-namespace
+/** NSH参数命令解析器；数值解析和格式化辅助函数均为私有成员。 */
+class ParamCommand
 {
+public:
+  /** 解析完整NSH参数命令。 */
+  static int execute(int argc, char *argv[]);
+private:
+  /** 显示参数命令帮助。 */
+  static int printUsage(const char *reason = nullptr);
+  /** 匹配参数名称或查询前缀。 */
+  static bool nameMatches(const char *name, const char *pattern);
+  /** 格式化并打印一个参数。 */
+  static bool printParameter(ParamManager &manager, ParamHandle handle);
+  /** 严格解析文本后设置当前值。 */
+  static bool setFromText(ParamManager &manager, ParamHandle handle, const char *text);
+  /** 严格解析文本后设置构型默认值。 */
+  static bool setDefaultFromText(ParamManager &manager, ParamHandle handle, const char *text);
+  /** 按定义类型严格比较参数值，返回NSH条件命令的退出状态。 */
+  static int compare(ParamManager &manager, const char *name, const char *text);
+};
+
 /** 打印命令帮助。 */
-int printUsage(const char *reason = nullptr)
+int ParamCommand::printUsage(const char *reason)
 {
   if (reason != nullptr)
     {
@@ -21,12 +41,12 @@ int printUsage(const char *reason = nullptr)
     }
 
   printf("usage: param {show [prefix*]|get <name>|set <name> <value>|"
-         "set-default <name> <value>|reset <name|all>|save|load|status}\n");
+         "set-default <name> <value>|compare <name> <value>|reset <name|all>|save|load|status}\n");
   return reason == nullptr ? 0 : -1;
 }
 
 /** 支持完整名称、前缀和末尾星号前缀查询。 */
-bool nameMatches(const char *name, const char *pattern)
+bool ParamCommand::nameMatches(const char *name, const char *pattern)
 {
   if (pattern == nullptr || pattern[0] == '\0' || strcmp(pattern, "*") == 0)
     {
@@ -42,7 +62,7 @@ bool nameMatches(const char *name, const char *pattern)
 }
 
 /** 按参数定义的类型打印当前值。 */
-bool printParameter(ParamManager &manager, ParamHandle handle)
+bool ParamCommand::printParameter(ParamManager &manager, ParamHandle handle)
 {
   const ParamDefinition *definition = manager.definition(handle);
   if (definition == nullptr)
@@ -73,7 +93,7 @@ bool printParameter(ParamManager &manager, ParamHandle handle)
 }
 
 /** 严格解析并设置与参数类型匹配的文本数值。 */
-bool setFromText(ParamManager &manager, ParamHandle handle, const char *text)
+bool ParamCommand::setFromText(ParamManager &manager, ParamHandle handle, const char *text)
 {
   const ParamDefinition *definition = manager.definition(handle);
   if (definition == nullptr || text == nullptr)
@@ -103,7 +123,7 @@ bool setFromText(ParamManager &manager, ParamHandle handle, const char *text)
 }
 
 /** 严格解析文本，并把它设置为构型默认值。 */
-bool setDefaultFromText(ParamManager &manager, ParamHandle handle,
+bool ParamCommand::setDefaultFromText(ParamManager &manager, ParamHandle handle,
                         const char *text)
 {
   const ParamDefinition *definition = manager.definition(handle);
@@ -126,10 +146,9 @@ bool setDefaultFromText(ParamManager &manager, ParamHandle handle,
   return errno == 0 && end != text && *end == '\0' &&
          manager.setDefault(handle, parsed);
 }
-} // namespace
 
 /** 解析 param 子命令并操作共享参数管理器。 */
-extern "C" int main(int argc, char *argv[])
+int ParamCommand::execute(int argc, char *argv[])
 {
   if (!paramSystemInitialize())
     {
@@ -144,6 +163,9 @@ extern "C" int main(int argc, char *argv[])
     }
 
   ParamManager &manager = params();
+  if (strcmp(argv[1], "compare") == 0 && argc == 4)
+    { return compare(manager, argv[2], argv[3]); }
+
   if (strcmp(argv[1], "show") == 0)
     {
       const char *pattern = argc >= 3 ? argv[2] : "*";
@@ -236,4 +258,34 @@ extern "C" int main(int argc, char *argv[])
     }
 
   return printUsage("unknown param command");
+}
+
+/** 比较命令不会修改参数或触发Flash保存，可用于编号脚本选择。 */
+int ParamCommand::compare(ParamManager &manager, const char *name, const char *text)
+{
+  const ParamHandle handle = manager.find(name);
+  const ParamDefinition *definition = manager.definition(handle);
+  if (definition == nullptr) { return printUsage("parameter not found"); }
+  errno = 0;
+  char *end = nullptr;
+  if (definition->type == ParamType::Int32)
+    {
+      const long parsed = strtol(text, &end, 0);
+      int32_t value = 0;
+      if (errno != 0 || end == text || *end != '\0' ||
+          parsed < INT32_MIN || parsed > INT32_MAX || !manager.get(handle, value))
+        { return printUsage("invalid comparison value"); }
+      return value == parsed ? 0 : -1;
+    }
+  const float parsed = strtof(text, &end);
+  float value = 0.0f;
+  if (errno != 0 || end == text || *end != '\0' || !isfinite(parsed) ||
+      !manager.get(handle, value)) { return printUsage("invalid comparison value"); }
+  return value == parsed ? 0 : -1;
+}
+
+/** 保留独立参数命令入口，内部实现及辅助函数封装在ParamCommand中。 */
+extern "C" int param_main(int argc, char *argv[])
+{
+  return ParamCommand::execute(argc, argv);
 }

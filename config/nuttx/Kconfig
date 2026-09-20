@@ -41,6 +41,10 @@ config CBOARD_CAN_OUTPUT_PROGNAME
 	string "CAN output command name"
 	default "can_output"
 
+config CBOARD_COMMAND_PROGNAME
+	string "Safety and command management command name"
+	default "command"
+
 endif
 
 endmenu

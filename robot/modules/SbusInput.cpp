@@ -3,6 +3,12 @@
  * @brief 实现 MK32 SBUS 串口配置、接收循环、链路超时和 uORB 发布。
  */
 
+// NuttX Make对命令源文件定义main宏；显式命名入口无需重命名，
+// 取消该宏以避免改写ModuleBase::main等C++成员名称。
+#ifdef main
+#undef main
+#endif
+
 #include "robot/modules/SbusInput.hpp"
 
 #include "robot/os/Clock.hpp"
@@ -14,14 +20,11 @@
 #include <termios.h>
 #include <unistd.h>
 
-namespace
-{
-constexpr const char *DefaultSbusDevice = "/dev/ttyS2";
 
 /** 从 start 后的参数中读取 -d 串口设备选项。 */
-const char *parseDevicePath(int argc, char *argv[])
+const char *SbusInput::parseDevicePath(int argc, char *argv[])
 {
-  const char *devicePath = DefaultSbusDevice;
+  const char *devicePath = "/dev/ttyS2";
   for (int index = 0; index < argc; ++index)
     {
       if (strcmp(argv[index], "-d") == 0 && index + 1 < argc)
@@ -33,7 +36,6 @@ const char *parseDevicePath(int argc, char *argv[])
 
   return devicePath;
 }
-} // namespace
 
 /** 初始化设备路径、uORB 发布器和运行统计。 */
 SbusInput::SbusInput(const char *devicePath)
@@ -45,7 +47,7 @@ SbusInput::SbusInput(const char *devicePath)
       _lossPublished(false)
 {
   snprintf(_devicePath, sizeof(_devicePath), "%s",
-           devicePath != nullptr ? devicePath : DefaultSbusDevice);
+           devicePath != nullptr ? devicePath : "/dev/ttyS2");
 }
 
 /** 释放串口文件描述符。 */
@@ -91,14 +93,6 @@ SbusInput *SbusInput::instantiate(int argc, char *argv[])
   return instance;
 }
 
-/** 当前没有额外命令，未知输入统一显示帮助。 */
-int SbusInput::custom_command(int argc, char *argv[])
-{
-  (void)argc;
-  (void)argv;
-  return print_usage("unknown command");
-}
-
 /** 打印 SBUS 模块命令及默认设备。 */
 int SbusInput::print_usage(const char *reason)
 {
@@ -109,7 +103,7 @@ int SbusInput::print_usage(const char *reason)
 
   printf("usage: sbus_input {start [-d device]|stop|status}\n");
   printf("default device: %s (USART3 RX PC11, 100000 8E2)\n",
-         DefaultSbusDevice);
+         "/dev/ttyS2");
   return reason == nullptr ? 0 : -1;
 }
 
@@ -270,4 +264,10 @@ void SbusInput::publishLossIfNeeded(uint64_t timestamp)
   _lastMessage.totalFrameCount = _decoder.totalFrames();
   _publication.publish(_lastMessage);
   __atomic_store_n(&_lossPublished, true, __ATOMIC_RELEASE);
+}
+
+/** 提供NSH的sbus_input命令入口，转交ModuleBase统一处理生命周期。 */
+extern "C" int sbus_input_main(int argc, char *argv[])
+{
+  return SbusInput::main(argc, argv);
 }

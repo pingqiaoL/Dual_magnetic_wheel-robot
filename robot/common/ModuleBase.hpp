@@ -3,13 +3,14 @@
  * @brief 提供仿 PX4 CRTP 写法的模块公共入口和生命周期管理。
  *
  * ModuleBase<T> 在对象创建前即可通过子类 T 的静态函数处理命令。
- * 子类需要实现 task_spawn、instantiate、custom_command 和 print_usage，
+ * 子类需要实现 task_spawn、instantiate、command_name 和 print_usage，
  * 并重写 run；父类统一完成 start、stop、status、线程跳板和对象释放。
  * 模板的全部实现必须放在头文件中，因此本模块没有对应的 .cpp 文件。
  */
 
 #pragma once
 
+#include "robot/common/CommandRouter.hpp"
 #include "robot/os/Clock.hpp"
 #include "robot/os/Task.hpp"
 
@@ -71,7 +72,7 @@ public:
       }
 
     lock_module();
-    const int result = T::custom_command(argc - 1, argv + 1);
+    const int result = CommandRouter::dispatch(T::command_name(), argc - 1, argv + 1);
     unlock_module();
     return result;
   }

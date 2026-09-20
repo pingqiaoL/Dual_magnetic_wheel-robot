@@ -27,8 +27,8 @@ public:
   /** 创建 RcUpdate 对象。 */
   static RcUpdate *instantiate(int argc, char *argv[]);
 
-  /** 处理模块自定义命令。 */
-  static int custom_command(int argc, char *argv[]);
+  /** 返回统一命令路由使用的固定模块名称。 */
+  static const char *command_name() { return "rc_update"; }
 
   /** 打印 rc_update 命令帮助。 */
   static int print_usage(const char *reason = nullptr);
@@ -40,6 +40,8 @@ public:
   void run() override;
 
 private:
+  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
+  friend class CommandRouter;
   /** 校准一帧输入并发布全部上层遥控 topic。 */
   void processInput(const InputRc &input, uint64_t now);
 

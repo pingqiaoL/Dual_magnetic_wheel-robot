@@ -1,400 +1,172 @@
-# 第六步：Climbot 执行器分配与 CAN 输出框架
+# 双磁轮构型、统一命令与CAN输出
 
-## 1. 设计目标
+当前实现沿用提供的PX4源码中“驱动拥有MixingOutput，MixingOutput引用驱动接口”的组织方式。
+各模块使用独立NuttX task，不引入工作队列。测厚数据仍由上位机读取。
 
-本步骤只保留四个核心部分：
-
-1. `RobotConfiguration` 描述机器人有多少电机和舵机。
-2. `Allocation` 把遥控器语义量分配到 `actuator_motors` 和 `actuator_servos`。
-3. `CanOutput` 继承 `OutputInterface`，使用 NuttX `/dev/can0` 下发执行器。
-4. `DamiaoProtocol` 只负责达妙协议的 CAN 帧编解码。
-
-电机型号、CAN ID、控制模式、协议和输出范围都由现有参数系统管理。Climbot 的 `.sh`
-构型文件使用 `param set-default` 设置本机默认值，用户通过 `param set` 修改后的值不会被
-构型脚本覆盖。
-
-## 2. 已完成的遥控器链路
+## 当前消息链路
 
 ```text
-MK32 接收机 SBUS
-       ↓
-sbus_input
-       ↓ input_rc
-rc_update
-  ├─ MIN/MAX/TRIM/DEADZONE/REV
-  ├─ RC_MAP_* 通道映射
-  └─ RC lost/failsafe
-       ↓
-manual_control + manual_control_switches
+MK32 -> SbusInput -> input_rc -> RcUpdate
+                              ├─ manual_control -> ControlAllocator
+                              │                    -> actuator_motors/servos
+                              └─ manual_control_switches -> Command
+                                                           -> actuator_armed
+CanOutput拥有MixingOutput -> 订阅执行器目标和actuator_armed
+                         -> 检查解锁、有效性、超时、有限数值及限幅
+                         -> _interface.updateOutputs(...)
+                         -> CanOutput编码达妙协议 -> NuttX /dev/can0
 ```
 
-默认左手油门模式已经配置：
+ControlAllocator不再判断SA位置或生成解锁状态。电机、舵机消息的旧armed字段已移除，
+唯一解锁状态定义在`msg/ActuatorArmed.msg`。所有消息头文件仍由.msg自动生成。
 
-```text
-CH1 -> roll
-CH2 -> pitch
-CH3 -> throttle
-CH4 -> yaw
-CH5..CH16 -> switch1..switch12
-```
+## 文件与职责
 
-`manual_control` 已包含归一化后的 `roll/pitch/yaw/throttle`，范围为 `-1..1`；
-`manual_control_switches` 已包含 12 路开关状态。因此 Allocation 不接触 SBUS 原始数据。
+| 文件 | 职责 |
+| --- | --- |
+| robot/common/ModuleBase.hpp | CRTP创建对象、启动、停止、状态和生命周期锁 |
+| robot/common/CommandRouter.hpp/.cpp | 所有扩展命令的唯一分发位置 |
+| robot/modules/Command.hpp/.cpp | 遥控安全互锁、手动禁止及解锁状态发布 |
+| robot/configuration/RobotConfiguration.hpp | 构型名称、两类执行器数量和可逆电机统计接口 |
+| robot/control/ActuatorEffectiveness.hpp | 继承构型接口，增加参数化矩阵生成接口 |
+| robot/control/ActuatorEffectivenessDualMagneticWheel.hpp/.cpp | 双磁轮模型，编号1，2个电机和2个转向执行器 |
+| robot/control/Allocation.hpp/.cpp | 共用矩阵乘法、输出有效性和归一化限幅 |
+| robot/modules/ControlAllocator.hpp/.cpp | 按模型编号创建子类，50Hz发布两类执行器目标 |
+| robot/output/OutputInterface.hpp | CAN/PWM/UART输出回调父类 |
+| robot/output/MixingOutput.hpp/.cpp | 不创建线程的公共安全输出处理器 |
+| robot/output/CanOutput.hpp/.cpp | 拥有MixingOutput，管理CAN设备与协议编码/反馈 |
+| protocol/can/DamiaoProtocol.hpp/.cpp | 不依赖操作系统的达妙协议编解码 |
+| config/nuttx/Makefile | 源文件、NSH入口与命令名称接入 |
 
-## 3. 精简后的文件树
+旧ClimbotConfiguration和ClimbotAllocation已由构型模型与共用算法替代，避免两处重复描述机型。
+新增代码不使用namespace块，原CanOutput匿名namespace中的函数已改为private静态成员。
+现有OS与uORB库仍沿用其os::、uorb::接口。
 
-```text
-msg/
-├─ ActuatorMotors.msg            # 归一化动力电机输出
-├─ ActuatorServos.msg            # 归一化舵机/转向输出
-└─ ActuatorStatus.msg            # CAN 执行器反馈与故障
+## command与扩展命令
 
-robot/
-├─ configuration/
-│  ├─ RobotConfiguration.hpp     # 所有机器人构型的父类
-│  ├─ ClimbotConfiguration.hpp   # Climbot 子类
-│  └─ ClimbotConfiguration.cpp
-│
-├─ control/
-│  ├─ Allocation.hpp             # 分配算法接口
-│  ├─ ClimbotAllocation.hpp      # Climbot 分配算法
-│  └─ ClimbotAllocation.cpp
-│
-├─ output/
-│  ├─ OutputInterface.hpp        # 输出驱动父类
-│  ├─ CanOutput.hpp              # NuttX CAN 输出模块
-│  └─ CanOutput.cpp
-│
-└─ modules/
-   ├─ ControlAllocator.hpp       # ModuleBase 任务
-   └─ ControlAllocator.cpp
-
-protocol/can/
-├─ CanProtocol.hpp               # 支持的 CAN 协议编号
-├─ DamiaoProtocol.hpp            # 达妙帧接口
-└─ DamiaoProtocol.cpp            # 达妙帧编解码
-
-apps/cboard/
-├─ control_allocator_main.cpp    # control_allocator start|stop|status
-└─ can_output_main.cpp           # can_output start|stop|status|protocols|map
-
-startup/etc/robots/
-└─ climbot.sh                    # Climbot 默认参数和模块启动
-
-tests/
-├─ damiao_protocol_test.cpp
-├─ climbot_allocation_test.cpp
-└─ step6_can_output.ps1
-```
-
-## 4. 数据流
-
-```mermaid
-flowchart LR
-    SBUS[sbus_input] --> IR[input_rc]
-    IR --> RC[rc_update]
-    RC --> MC[manual_control]
-    RC --> MS[manual_control_switches]
-
-    MC --> CA[ControlAllocator]
-    MS --> CA
-    CFG[ClimbotConfiguration] --> CA
-    PAR[ParamManager] --> CA
-
-    CA --> AM[actuator_motors]
-    CA --> AS[actuator_servos]
-
-    AM --> CO[CanOutput : OutputInterface]
-    AS --> CO
-    CP[CAN_* 参数] --> CO
-    CO --> DP[DamiaoProtocol]
-    DP --> NC[NuttX /dev/can0]
-    NC --> BUS[CAN1 1 Mbps]
-```
-
-## 5. RobotConfiguration 与 Climbot
-
-`RobotConfiguration` 只统计执行器，不处理 CAN 协议：
-
-```cpp
-class RobotConfiguration
-{
-public:
-  virtual ~RobotConfiguration() = default;
-
-  virtual const char *name() const = 0;
-  virtual uint8_t motorCount() const = 0;
-  virtual uint8_t servoCount() const = 0;
-  virtual uint32_t reversibleMotorMask() const = 0;
-};
-```
-
-Climbot 子类第一版定义：
-
-```cpp
-class ClimbotConfiguration final : public RobotConfiguration
-{
-public:
-  const char *name() const override { return "climbot"; }
-  uint8_t motorCount() const override { return 2; }
-  uint8_t servoCount() const override { return 2; }
-  uint32_t reversibleMotorMask() const override { return 0x03; }
-};
-```
-
-PX4 风格分类按执行器作用区分，而不是按通信硬件区分：
-
-```text
-actuator_motors[0] -> 前动力轮，达妙 S3519，速度模式
-actuator_motors[1] -> 后动力轮，达妙 S3519，速度模式
-actuator_servos[0] -> 前轮转向，达妙 4310，位置速度模式
-actuator_servos[1] -> 后轮转向，达妙 4310，位置速度模式
-```
-
-4310 在硬件上仍是 CAN 电机，但在控制分配中承担转向，所以归入 `actuator_servos`。
-
-## 6. Allocation
-
-`ControlAllocator` 订阅 `manual_control`，调用当前构型的 `Allocation`，发布两类执行器
-topic。第一版 Climbot 默认分配为：
-
-```cpp
-motors[0] = throttle * CA_THR_F;
-motors[1] = throttle * CA_THR_R;
-
-servos[0] = yaw * CA_YAW_F;
-servos[1] = yaw * CA_YAW_R;
-```
-
-构型脚本默认值：
-
-```text
-CA_THR_F = 1.0    前动力轮参与前进后退
-CA_THR_R = 1.0    后动力轮参与前进后退
-CA_YAW_F = 1.0    前转向电机参与偏航
-CA_YAW_R = 0.0    第一版后转向电机不参与偏航
-```
-
-这实现“前后动力轮同时前进后退，当前只调用前轮转向产生偏航”。以后执行：
+ModuleBase保留start、stop、status，并在持有目标生命周期锁时调用CommandRouter。
+各业务模块不再实现custom_command。CommandRouter独立的小头文件用于避免模板父类与
+具体业务模块互相包含；所有扩展命令的实现都集中在其.cpp中。
 
 ```sh
-param set CA_YAW_R -1
+command status
+command can_output protocols
+command can_output map
+command control_allocator status
+command param get CA_YAW_R
+command disable
+command enable
 ```
 
-即可让后轮反向参与转向；设置为 `1` 则同向参与，不需要修改 Allocation 代码。
+原来的`can_output protocols/map/enable/disable/zero/clear`和`robot ready`仍然可用，
+它们也经过同一个路由。enable只解除手动禁止，不能跳过遥控互锁。
+can_output enable/disable现在是全局输出禁止的兼容入口。param继续保留独立入口。
 
-输出发布前统一限制在 `-1..1`。`manual_control.valid=false`、RC lost 或急停时，两类
-输出立即变为无效，动力输出归零。
+## 安全开关
 
-## 7. OutputInterface 和 CanOutput
+沿用`CA_ARM_SW`，表示rc_update发布的第几路开关，编号1到12。
+例如`CA_ARM_SW=1`使用`RC_MAP_SW1`映射的物理遥控通道；物理通道的MIN/MAX/TRIM/
+REV/DEADZONE仍由rc_update处理。POSITION_ON=1、MIDDLE=2、OFF=3。
 
-```cpp
-enum class ActuatorType : uint8_t
-{
-  Motor,
-  Servo
-};
+上电必须在有效遥控数据中观察到一次OFF，然后ON才解锁。上电时为ON会每5秒提示一次。
+完成上电检查后，OFF或中位失能、ON使能；短暂失联只失能，不重复上电检查。
+修改CA_ARM_SW或重新创建Command模块会重新要求OFF。
 
-class OutputInterface
-{
-public:
-  virtual ~OutputInterface() = default;
-  virtual bool init() = 0;
+摇杆或开关采样超过500毫秒、映射无效、输入无效都会发布失锁。
+MixingOutput也独立检查command心跳、两类目标及目标的采样时间，避免任务停止后继续使用缓存。
+驱动写入失败时停止两类执行器，后续周期可重试；初次运行也发送真实失能帧，
+不假定MCU复位会让独立供电的电机失能。这里的protocol armed只表示管理帧写入成功，
+不代表每台电机已通过反馈确认使能。
 
-  virtual bool updateOutputs(ActuatorType type,
-                             bool stopMotors,
-                             const float *outputs,
-                             uint8_t count,
-                             uint64_t now) = 0;
-};
-```
+CanOutput仍支持当前2路动力和2路转向参数槽。MixingOutput可供后续PWM/UART驱动复用，
+这次未增加PWM或串口舵机的硬件驱动。
 
-`CanOutput` 是 `OutputInterface` 的子类，并且是唯一访问 `/dev/can0` 的任务：
+## 构型模型与分配矩阵
 
-```cpp
-class CanOutput final : public OutputInterface
-{
-public:
-  bool init() override;
-
-  bool updateOutputs(ActuatorType type,
-                     bool stopMotors,
-                     const float *outputs,
-                     uint8_t count,
-                     uint64_t now) override;
-
-private:
-  int _canFd{-1};
-};
-```
-
-NuttX BSP 中完成 CAN1 注册：
+`ActuatorEffectivenessDualMagneticWheel`继承ActuatorEffectiveness，后者继承RobotConfiguration。
+模型决定电机2路、转向2路，动力轮允许正反转。输入为u=[throttle,yaw]：
 
 ```text
-STM32 CAN1 PD0/PD1
-       ↓
-stm32_caninitialize(1)
-       ↓
-can_register("/dev/can0", can)
-       ↓
-CanOutput open("/dev/can0")
+a = M*u
+M = [ CA_THR_F   0        ]  -> M0 前动力
+    [ CA_THR_R   0        ]  -> M1 后动力
+    [ 0          CA_YAW_F ]  -> S0 前转向
+    [ 0          CA_YAW_R ]  -> S1 后转向
 ```
 
-不移植官方 STM32 HAL 的 `CAN_HandleTypeDef`、中断回调和 `HAL_Delay`。
+默认CA_THR_F/R=1、CA_YAW_F=1、CA_YAW_R=0。后转向也发布并使能，归一化目标0对应
+其PMIN与PMAX的中点；如果机械零位需要对应0rad，应使用对称的位置上下限并完成电机零点校准。
 
-## 8. 在 CanOutput 中选择协议
+这个矩阵是轮式机器人的直接控制分配矩阵，不是PX4飞行器的力/力矩有效性矩阵或其伪逆。
+后续需要物理力/力矩模型时可以更换Allocation算法，模型父类与工厂选择结构已经准备好。
 
-支持协议使用简单枚举：
+CA_THR/YAW参数修改后生成新矩阵。运行中改变CA_AIRFRAME会使现有分配结果无效，
+需要停止并重新启动分配器；不在正在运行的任务中直接替换构型对象。
 
-```cpp
-enum class CanProtocol : int32_t
-{
-  Disabled = 0,
-  Damiao = 1
-};
-```
-
-每次下发时读取已经缓存的参数配置，再调用对应协议：
-
-```cpp
-bool CanOutput::sendOne(const CanChannelConfig &config, float output)
-{
-  switch (config.protocol)
-    {
-      case CanProtocol::Damiao:
-        return sendDamiao(config, output);
-
-      case CanProtocol::Disabled:
-      default:
-        return true;
-    }
-}
-```
-
-`sendDamiao()` 根据执行器类型和模式调用：
+## 编号启动脚本
 
 ```text
-Motor + Velocity
-    -> ID = 0x200 + CAN_ID
-    -> v_des = output * VMAX
-
-Servo + PositionVelocity
-    -> ID = 0x100 + CAN_ID
-    -> p_des 在 PMIN..PMAX 内映射
-    -> v_des = VMAX
+rcS
+  robot start                         # 初始化Flash参数系统
+  source rc.autostart
+    SYS_AUTOSTART=1
+      source /etc/robots/1_dual_magneticwheel
+        param set CA_AIRFRAME 1
+        param set-default CA_* / CAN_*
+  rc_update start
+  sbus_input start -d /dev/ttyS2
+  control_allocator start             # 工厂按CA_AIRFRAME创建模型
+  can_output start -d /dev/can0
+  command start                       # 前面的模块就绪后才接收解锁操作
+  robot ready
 ```
 
-`DamiaoProtocol` 只生成或解析 CAN 帧，不打开设备、不创建线程、不访问 uORB。
-
-## 9. CAN 参数
-
-参数名保持在 16 字符以内：
-
-```text
-CAN_M0_PROTO    前动力轮协议，0关闭，1达妙
-CAN_M0_TYPE     电机型号编号
-CAN_M0_ID       接收 ID
-CAN_M0_FBID     反馈 ID
-CAN_M0_MODE     默认 3，速度模式
-CAN_M0_VMAX     最大速度 rad/s
-CAN_M0_REV      方向 1/-1
-
-CAN_M1_*        后动力轮
-
-CAN_S0_PROTO    前转向协议
-CAN_S0_TYPE     默认 DM4310
-CAN_S0_ID       接收 ID
-CAN_S0_FBID     反馈 ID
-CAN_S0_MODE     默认 2，位置速度模式
-CAN_S0_PMIN     机械指令最小位置 rad
-CAN_S0_PMAX     机械指令最大位置 rad
-CAN_S0_PFBMAX   达妙反馈协议位置量程，按电机手册设置，默认 ±12.5 rad
-CAN_S0_VMAX     转向最大速度 rad/s
-CAN_S0_REV      方向 1/-1
-
-CAN_S1_*        后转向
-```
-
-`CanOutput` 订阅 `parameter_update`。参数变化后刷新缓存，不在每个发送周期按名称搜索
-参数。
-
-NSH 查询支持的协议：
+SYS_AUTOSTART=1是启动配置编号，CA_AIRFRAME=1是模型编号。编号可不同，目前都使用1。
+不支持的启动配置或失败的模块启动会中止rcS，未启动的command不会发布解锁。
+配置文件使用set-default保留用户已有修改；CA_AIRFRAME由选中的脚本明确设置。
 
 ```sh
-nsh> can_output protocols
-0  disabled
-1  damiao
+param get SYS_AUTOSTART
+param get CA_AIRFRAME
+param compare SYS_AUTOSTART 1
 ```
 
-查询当前映射：
+param compare不改参数，相等返回0，不相等返回非零，供NSH的if条件使用。
+构建脚本对固定版本Apache apps应用`tools/fix_nsh_script_eof.py`兼容修正：正常脚本EOF
+返回成功，命令错误及读取错误仍失败。修正可重复执行，不依赖手工修改下载源码。
+所有启动脚本行限制在72个UTF-8字节以内，避免当前NSH行缓冲区截断。
+
+## 增加另一机型
+
+1. 增加`startup/etc/robots/2_<name>`，设置CA_AIRFRAME及构型参数默认值。
+2. 在`rc.autostart`增加SYS_AUTOSTART=2的选择分支。
+3. 新增ActuatorEffectiveness子类，实现名称、数量、可逆标志和矩阵生成。
+4. 在ControlAllocator::createEffectiveness增加该CA_AIRFRAME编号的case。
+5. 在config/nuttx/Makefile的CXXSRCS加入新.cpp；新的目录还需加入VPATH。
+
+超出现有CAN的2+2参数槽时，还需扩展CanOutput容量与参数注册，或接入其他输出驱动。
+
+## 编译、烧录与验收
+
+这次修改了Kconfig/defconfig，首次重新配置应执行：
+
+```powershell
+.\tests\step6_can_motor.ps1
+.\tools\build.ps1 -Clean -Jobs 4
+.\tools\flash_wireless.ps1
+```
+
+后续只修改普通源码或构型脚本时使用`build.ps1 -Jobs 4`，再执行无线烧录脚本。
+烧录后在NSH中分别输入：
 
 ```sh
-nsh> can_output map
-motor 0: damiao id=1 mode=velocity
-motor 1: damiao id=2 mode=velocity
-servo 0: damiao id=3 mode=position_velocity
-servo 1: damiao id=4 mode=position_velocity
+robot status
+command status
+control_allocator status
+can_output status
+command can_output map
 ```
 
-选择协议仍通过统一参数系统：
-
-```sh
-param set CAN_M0_PROTO 1
-param set CAN_M1_PROTO 1
-param set CAN_S0_PROTO 1
-param set CAN_S1_PROTO 1
-```
-
-## 10. Climbot 构型脚本
-
-增加 `/etc/robots/climbot.sh`：
-
-```sh
-#! /bin/nsh
-
-# 动力分配默认值
-param set-default CA_THR_F 1.0
-param set-default CA_THR_R 1.0
-param set-default CA_YAW_F 1.0
-param set-default CA_YAW_R 0.0
-
-# 两个动力电机：达妙速度模式
-param set-default CAN_M0_PROTO 1
-param set-default CAN_M0_MODE 3
-param set-default CAN_M1_PROTO 1
-param set-default CAN_M1_MODE 3
-
-# 两个转向执行器：达妙位置速度模式
-param set-default CAN_S0_PROTO 1
-param set-default CAN_S0_MODE 2
-param set-default CAN_S1_PROTO 1
-param set-default CAN_S1_MODE 2
-
-control_allocator start -c climbot
-can_output start
-```
-
-`param set-default` 需要在现有参数命令中增加。它只改变构型默认值：
-
-- 参数从未被用户修改时，采用脚本默认值。
-- 参数已经由 `param set` 保存时，保留用户值。
-- 不会在每次启动时覆盖转向零偏、方向、CAN ID 等标定结果。
-
-现阶段 `rcS` 在当前 NSH 中加载构型脚本，避免创建第二个 shell 后重复执行启动流程：
-
-```sh
-source /etc/robots/climbot.sh
-```
-
-以后有第二种机器人时，再增加另一个 `RobotConfiguration` 子类和对应 `.sh` 文件。
-
-## 11. 实现顺序
-
-1. 给参数系统增加 `param set-default`。
-2. 增加 `ActuatorMotors.msg`、`ActuatorServos.msg`、`ActuatorStatus.msg`。
-3. 实现 `RobotConfiguration`、`ClimbotConfiguration` 和 Allocation 主机测试。
-4. 在 CBoard BSP 中注册 NuttX `/dev/can0`，先完成 CAN 回环测试。
-5. 实现 `OutputInterface` 和 `CanOutput`。
-6. 移植并测试 `DamiaoProtocol`，先只接一台失能状态电机读取反馈。
-7. 完成单台 4310 小角度测试和单台 S3519 低速测试。
-8. 最后启用 Climbot 四执行器分配和 RC lost 保护。
+上电SA保持OFF，等初始化完成提示后拨ON；检查四台电机反馈及后转向中位。
+主机测试覆盖协议、参数持久化、矩阵更新、开关互锁、超时、异常数值和虚函数失败处理。
+真实串口、CAN时序和电机动作仍需烧录后上板验收。

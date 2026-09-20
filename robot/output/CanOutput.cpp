@@ -3,9 +3,16 @@
  * @brief 实现 NuttX CAN 字符设备、达妙协议选择、反馈解析和 NSH 管理命令。
  */
 
+// NuttX Make对命令源文件定义main宏；显式命名入口无需重命名，
+// 取消该宏以避免改写ModuleBase::main等C++成员名称。
+#ifdef main
+#undef main
+#endif
+
 #include "robot/output/CanOutput.hpp"
 
 #include "robot/os/Clock.hpp"
+#include "robot/modules/Command.hpp"
 #include "robot/params/ParamManager.hpp"
 
 #include <errno.h>
@@ -16,22 +23,20 @@
 #include <string.h>
 #include <unistd.h>
 
-namespace
-{
 /** 把控制量限制在归一化输出范围。 */
-float constrainUnit(float value)
+float CanOutput::constrainUnit(float value)
 {
   return value < -1.0f ? -1.0f : (value > 1.0f ? 1.0f : value);
 }
 
 /** 返回供状态输出使用的协议名称。 */
-const char *protocolName(CanProtocol protocol)
+const char *CanOutput::protocolName(CanProtocol protocol)
 {
   return protocol == CanProtocol::Damiao ? "damiao" : "disabled";
 }
 
 /** 返回达妙模式的简短名称。 */
-const char *modeName(DamiaoMode mode)
+const char *CanOutput::modeName(DamiaoMode mode)
 {
   if (mode == DamiaoMode::Velocity)
     {
@@ -47,19 +52,15 @@ const char *modeName(DamiaoMode mode)
     }
   return "position_velocity_torque";
 }
-} // namespace
 
 /** 保存设备路径并绑定执行器、参数和状态 topic。 */
 CanOutput::CanOutput(const char *devicePath)
     : _canFd(-1),
-      _motorsSubscription(actuatorMotorsTopic()),
-      _servosSubscription(actuatorServosTopic()),
+      _mixingOutput(*this, MotorCount, ServoCount),
       _parameterSubscription(parameterUpdateTopic()),
       _statusPublication(actuatorStatusTopic()),
       _lastStatusPublish(0),
-      _haveMotors(false),
-      _haveServos(false),
-      _operatorEnabled(true),
+      _parametersValid(false),
       _protocolArmed(false)
 {
   snprintf(_devicePath, sizeof(_devicePath), "%s",
@@ -116,68 +117,6 @@ CanOutput *CanOutput::instantiate(int argc, char *argv[])
   return output;
 }
 
-/** 处理协议查询、映射查询和显式电机管理命令。 */
-int CanOutput::custom_command(int argc, char *argv[])
-{
-  if (argc >= 1 && strcmp(argv[0], "protocols") == 0)
-    {
-      printf("0  disabled\n1  damiao\n");
-      return 0;
-    }
-
-  CanOutput *instance = get_instance();
-  if (instance == nullptr)
-    {
-      return print_usage("can_output is not running");
-    }
-
-  if (argc >= 1 && strcmp(argv[0], "map") == 0)
-    {
-      instance->printMap();
-      return 0;
-    }
-  if (argc >= 1 && strcmp(argv[0], "enable") == 0)
-    {
-      __atomic_store_n(&instance->_operatorEnabled, true, __ATOMIC_RELEASE);
-      printf("manual output inhibit cleared; SA safety interlock still required\n");
-      return 0;
-    }
-  if (argc >= 1 && strcmp(argv[0], "disable") == 0)
-    {
-      __atomic_store_n(&instance->_operatorEnabled, false, __ATOMIC_RELEASE);
-      printf("manual output inhibit active\n");
-      return 0;
-    }
-
-  if (argc >= 3 && (strcmp(argv[0], "zero") == 0 ||
-                    strcmp(argv[0], "clear") == 0))
-    {
-      const ActuatorType type = strcmp(argv[1], "motor") == 0
-                                    ? ActuatorType::Motor
-                                    : ActuatorType::Servo;
-      if (strcmp(argv[1], "motor") != 0 && strcmp(argv[1], "servo") != 0)
-        {
-          return print_usage("type must be motor or servo");
-        }
-      const long index = strtol(argv[2], nullptr, 0);
-      const uint8_t count = type == ActuatorType::Motor ? MotorCount : ServoCount;
-      if (index < 0 || index >= count)
-        {
-          return print_usage("actuator index is out of range");
-        }
-      if (__atomic_load_n(&instance->_protocolArmed, __ATOMIC_ACQUIRE))
-        {
-          return print_usage("disable RC output before zero or clear");
-        }
-      return instance->sendSpecial(type, static_cast<uint8_t>(index),
-                                   strcmp(argv[0], "zero") == 0 ? 0xfe : 0xfb)
-                 ? 0
-                 : -1;
-    }
-
-  return print_usage("unknown command");
-}
-
 /** 打印模块命令和显式安全门说明。 */
 int CanOutput::print_usage(const char *reason)
 {
@@ -194,7 +133,8 @@ int CanOutput::print_usage(const char *reason)
 /** 打开 NuttX CAN 字符设备并加载参数配置。 */
 bool CanOutput::init()
 {
-  if (!refreshParameters())
+  _parametersValid = refreshParameters();
+  if (!_parametersValid)
     {
       fprintf(stderr, "invalid CAN output parameters\n");
       return false;
@@ -215,9 +155,29 @@ bool CanOutput::updateOutputs(ActuatorType type, bool stopMotors,
                               uint64_t now)
 {
   (void)now;
-  if (outputs == nullptr || stopMotors)
+  os::LockGuard outputGuard(_outputMutex);
+  if (!outputGuard.locked()) { return false; }
+  // MixingOutput决定是否停止；驱动只把停止状态转换为真实管理帧。
+  if (stopMotors)
     {
-      return false;
+      if (!__atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE) && !_disablePending)
+        { return true; }
+      const bool stopped = sendSpecialAll(0xfd);
+      // 写入失败时保留已使能标志，后续停止回调继续重试。
+      if (stopped)
+        {
+          __atomic_store_n(&_protocolArmed, false, __ATOMIC_RELEASE);
+          _disablePending = false;
+        }
+      else { _disablePending = true; }
+      return stopped;
+    }
+  if (!_parametersValid || _disablePending || outputs == nullptr) { return false; }
+  if (!__atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE))
+    {
+      // 即使使能仅部分成功，也必须让停止回调尝试失能所有通道。
+      __atomic_store_n(&_protocolArmed, true, __ATOMIC_RELEASE);
+      if (!sendSpecialAll(0xfc)) { return false; }
     }
 
   const uint8_t maximum = type == ActuatorType::Motor ? MotorCount : ServoCount;
@@ -252,7 +212,7 @@ int CanOutput::print_status()
   printf("running\n");
   printf("device: %s\n", _devicePath);
   printf("manual output allowed: %s\n",
-         __atomic_load_n(&_operatorEnabled, __ATOMIC_ACQUIRE) ? "yes" : "no");
+         Command::outputInhibited() ? "no" : "yes");
   printf("protocol armed: %s\n",
          __atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE) ? "yes" : "no");
   printf("tx/rx/errors: %lu/%lu/%lu\n",
@@ -271,61 +231,22 @@ void CanOutput::run()
   while (!should_exit())
     {
       const uint64_t now = os::Clock::nowMicroseconds();
-      ParameterUpdate update;
+      ParameterUpdate update{};
       if (_parameterSubscription.update(update))
         {
-          if (__atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE))
-            {
-              (void)sendSpecialAll(0xfd);
-              __atomic_store_n(&_protocolArmed, false, __ATOMIC_RELEASE);
-            }
-          (void)refreshParameters();
+          // 必须先停止旧配置，停止发送成功后才能切换ID及协议。
+          const bool stopped = updateOutputs(ActuatorType::Motor, true,
+                                             nullptr, 0, now);
+          if (stopped) { _parametersValid = refreshParameters(); }
+          else { _parametersValid = false; _reloadPending = true; }
         }
-
-      const bool motorsChanged = _motorsSubscription.update(_motors);
-      const bool servosChanged = _servosSubscription.update(_servos);
-      _haveMotors = _haveMotors || motorsChanged;
-      _haveServos = _haveServos || servosChanged;
-
-      const bool requestedArmed =
-          __atomic_load_n(&_operatorEnabled, __ATOMIC_ACQUIRE) &&
-          _haveMotors && _haveServos && _motors.valid && _servos.valid &&
-          _motors.armed && _servos.armed;
-
-      const bool protocolArmed =
-          __atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE);
-      bool justArmed = false;
-      if (requestedArmed && !protocolArmed)
+      if (_reloadPending && updateOutputs(ActuatorType::Motor, true,
+                                           nullptr, 0, now))
         {
-          const bool enabled = sendSpecialAll(0xfc);
-          if (!enabled)
-            {
-              (void)sendSpecialAll(0xfd);
-            }
-          __atomic_store_n(&_protocolArmed, enabled, __ATOMIC_RELEASE);
-          justArmed = enabled;
+          _parametersValid = refreshParameters();
+          _reloadPending = false;
         }
-      else if (!requestedArmed && protocolArmed)
-        {
-          (void)sendSpecialAll(0xfd);
-          __atomic_store_n(&_protocolArmed, false, __ATOMIC_RELEASE);
-        }
-
-      if (__atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE))
-        {
-          // 解锁周期无条件下发缓存目标，保证最后一个转向通道在使能后
-          // 立即收到中位位置命令，后续继续跟随 uORB 更新。
-          if (motorsChanged || justArmed)
-            {
-              (void)updateOutputs(ActuatorType::Motor, false,
-                                  _motors.control, _motors.count, now);
-            }
-          if (servosChanged || justArmed)
-            {
-              (void)updateOutputs(ActuatorType::Servo, false,
-                                  _servos.control, _servos.count, now);
-            }
-        }
+      (void)_mixingOutput.update();
 
       receiveFrames(now);
       if (_lastStatusPublish == 0 || now - _lastStatusPublish >= 100000ULL)
@@ -513,7 +434,7 @@ bool CanOutput::writeFrame(const CanFrame &frame)
 /** 清空本周期已经到达的非阻塞 CAN 消息。 */
 void CanOutput::receiveFrames(uint64_t now)
 {
-  while (_canFd >= 0)
+  for (uint8_t receivedCount = 0; receivedCount < 32 && _canFd >= 0; ++receivedCount)
     {
       struct can_msg_s message{};
       const ssize_t received = read(_canFd, &message, sizeof(message));
@@ -686,4 +607,10 @@ void CanOutput::publishStatus(uint64_t now)
                               now - _status.timestampSample[index] <= 500000ULL;
     }
   (void)_statusPublication.publish(_status);
+}
+
+/** 提供NSH的can_output命令入口，转交ModuleBase统一处理生命周期。 */
+extern "C" int can_output_main(int argc, char *argv[])
+{
+  return CanOutput::main(argc, argv);
 }

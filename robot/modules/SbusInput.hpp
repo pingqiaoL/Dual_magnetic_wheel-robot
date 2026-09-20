@@ -30,8 +30,8 @@ public:
   /** 解析 -d 参数、创建对象并打开 SBUS 串口。 */
   static SbusInput *instantiate(int argc, char *argv[]);
 
-  /** 处理模块自定义命令。 */
-  static int custom_command(int argc, char *argv[]);
+  /** 返回统一命令路由使用的固定模块名称。 */
+  static const char *command_name() { return "sbus_input"; }
 
   /** 打印 sbus_input 命令帮助。 */
   static int print_usage(const char *reason = nullptr);
@@ -43,6 +43,10 @@ public:
   void run() override;
 
 private:
+  /** 从启动参数读取串口设备路径，默认使用ttyS2。 */
+  static const char *parseDevicePath(int argc, char *argv[]);
+  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
+  friend class CommandRouter;
   /** 按 100000 波特率、8E2、非阻塞方式打开串口。 */
   bool initialize();
 

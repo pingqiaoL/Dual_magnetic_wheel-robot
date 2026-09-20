@@ -3,6 +3,12 @@
  * @brief 实现 RobotRuntime 的线程创建、对象创建、状态输出和周期循环。
  */
 
+// NuttX Make对命令源文件定义main宏；显式命名入口无需重命名，
+// 取消该宏以避免改写ModuleBase::main等C++成员名称。
+#ifdef main
+#undef main
+#endif
+
 #include "robot/modules/RobotRuntime.hpp"
 
 #include "robot/os/Clock.hpp"
@@ -45,22 +51,6 @@ RobotRuntime *RobotRuntime::instantiate(int argc, char *argv[])
       return nullptr;
     }
   return new RobotRuntime();
-}
-
-/** 处理rcS发出的ready命令，公布全部模块已经初始化完成。 */
-int RobotRuntime::custom_command(int argc, char *argv[])
-{
-  if (argc >= 1 && strcmp(argv[0], "ready") == 0)
-    {
-      RobotRuntime *instance = get_instance();
-      if (instance == nullptr)
-        {
-          return print_usage("robot runtime is not running");
-        }
-      instance->markInitializationComplete();
-      return 0;
-    }
-  return print_usage("unknown command");
 }
 
 /** 打印命令说明，供 NSH 帮助和错误提示使用。 */
@@ -121,4 +111,10 @@ void RobotRuntime::markInitializationComplete()
     {
       printf("CBoard initialization complete; set SA OFF, then ON to arm\n");
     }
+}
+
+/** 提供NSH的robot命令入口，转交ModuleBase统一处理生命周期。 */
+extern "C" int robot_main(int argc, char *argv[])
+{
+  return RobotRuntime::main(argc, argv);
 }

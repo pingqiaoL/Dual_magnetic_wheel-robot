@@ -5,13 +5,13 @@
 ## 组成
 
 - `robot/common/ModuleBase.hpp`：仅用头文件实现 CRTP 模块父类，统一 `start`、`stop`、`status`、线程入口、对象创建和释放。
-- `robot/os/Thread.*`：线程名称、优先级、栈大小、创建与回收。
+- `robot/os/Task.*`：线程名称、优先级、栈大小、创建与回收。
 - `robot/os/Mutex.*`、`Semaphore.*`、`Clock.*`：NuttX/POSIX 原语的薄封装。
 - `robot/modules/RobotRuntime.*`：无硬件输出的基础运行任务，100 ms 一次循环。
-- `apps/cboard/robot_main.cpp`：注册为 NSH 内置命令 `robot`。
+- `robot/modules/RobotRuntime.cpp末尾的robot_main`：注册为 NSH 内置命令 `robot`。
 - `startup/etc/init.d/rcS`：启动时执行 `robot start`。
 
-构建脚本将项目自己的应用和业务源码复制到可丢弃的 `upstream/apps/cboard` 构建目录，并把 `startup/etc` 生成为板级 ROMFS。不要直接修改同步后的上游目录。
+构建脚本将config/nuttx构建文件和业务源码复制到可丢弃的 `upstream/apps/cboard` 构建目录，并把 `startup/etc` 生成为板级 ROMFS。不要直接修改同步后的上游目录。
 
 ## 主机侧验证
 
@@ -46,3 +46,9 @@ ps
 预期行为：首次启动由 `rcS` 自动完成；重复 `start` 返回 already running；`stop` 后 `status` 返回 not running；再次 `start` 可以恢复运行；`ps` 中能看到 `robot_core` 线程。
 
 这一任务只更新循环计数，不访问 CAN、PWM、UART 或任何执行器。
+
+## 后续重构
+
+当前扩展命令统一转交CommandRouter，子类不再实现custom_command。
+Command安全模块通过actuator_armed发布解锁信息；完整启动顺序和文件职责见
+[执行器框架说明](step6-damiao-motor-framework.md)。

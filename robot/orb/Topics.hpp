@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "msg/ActuatorArmed.hpp"
 #include "msg/ActuatorMotors.hpp"
 #include "msg/ActuatorServos.hpp"
 #include "msg/ActuatorStatus.hpp"
@@ -38,3 +39,6 @@ uorb::Topic<ActuatorServos> &actuatorServosTopic();
 
 /** 返回 CAN 执行器反馈 topic：actuator_status。 */
 uorb::Topic<ActuatorStatus> &actuatorStatusTopic();
+
+/** 返回command发布的统一执行器安全状态topic。 */
+uorb::Topic<ActuatorArmed> &actuatorArmedTopic();

@@ -60,3 +60,10 @@ uorb::Topic<ActuatorStatus> &actuatorStatusTopic()
   static uorb::Topic<ActuatorStatus> topic;
   return topic;
 }
+
+/** 返回进程内唯一的actuator_armed topic。 */
+uorb::Topic<ActuatorArmed> &actuatorArmedTopic()
+{
+  static uorb::Topic<ActuatorArmed> topic;
+  return topic;
+}

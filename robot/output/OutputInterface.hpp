@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-/** 区分 PX4 风格的动力电机输出和舵机/转向输出。 */
+/** 动力电机输出和舵机/转向输出。 */
 enum class ActuatorType : uint8_t
 {
   Motor = 0,
@@ -23,7 +23,10 @@ public:
   /** 打开并初始化底层输出设备。 */
   virtual bool init() = 0;
 
-  /** 把一组归一化输出写到相应物理执行器。 */
+  /** 由MixingOutput回调：stopMotors为true时停止该类型执行器。
+   * 停止回调的outputs可为nullptr且count为0；必须执行实际失能而非仅发送零值。
+   * 正常输出为-1到1，返回false时公共处理器会停止两类输出。
+   */
   virtual bool updateOutputs(ActuatorType type, bool stopMotors,
                              const float *outputs, uint8_t count,
                              uint64_t now) = 0;

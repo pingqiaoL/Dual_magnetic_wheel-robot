@@ -22,8 +22,8 @@ $requiredFiles = @(
     'robot\modules\RcConfig.cpp',
     'robot\modules\RcUpdate.hpp',
     'robot\modules\RcUpdate.cpp',
-    'apps\cboard\sbus_input_main.cpp',
-    'apps\cboard\rc_update_main.cpp'
+    'robot\modules\SbusInput.cpp',
+    'robot\modules\RcUpdate.cpp'
 )
 
 $missing = @($requiredFiles | Where-Object {

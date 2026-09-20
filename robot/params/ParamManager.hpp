@@ -79,6 +79,8 @@ public:
   uint32_t storageSequence() const;
 
 private:
+  /** 按原始位模式比较参数值，避免浮点特殊值影响判断。 */
+  static bool sameValue(const ParamValue &left, const ParamValue &right);
   ParamManager();
   ParamManager(const ParamManager &) = delete;
   ParamManager &operator=(const ParamManager &) = delete;

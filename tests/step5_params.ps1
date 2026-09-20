@@ -15,7 +15,7 @@ $requiredFiles = @(
     'robot\params\FlashParamStorage.cpp',
     'robot\params\ParamSystem.hpp',
     'robot\params\ParamSystem.cpp',
-    'apps\cboard\param_main.cpp'
+    'robot\params\param_main.cpp'
 )
 
 $missing = @($requiredFiles | Where-Object {

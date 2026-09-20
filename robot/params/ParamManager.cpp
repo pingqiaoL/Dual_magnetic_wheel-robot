@@ -12,14 +12,11 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace
-{
 /** 比较参数原始值，避免浮点比较带来的特殊情况。 */
-bool sameValue(const ParamValue &left, const ParamValue &right)
+bool ParamManager::sameValue(const ParamValue &left, const ParamValue &right)
 {
   return left.raw == right.raw;
 }
-} // namespace
 
 /** 返回静态构造的参数管理器。 */
 ParamManager &ParamManager::instance()
@@ -419,6 +416,8 @@ void ParamManager::buildDefinitions()
 
   addInt("RC_CHAN_CNT", 16);
 
+  addInt("SYS_AUTOSTART", 1);
+  addInt("CA_AIRFRAME", 1);
   addFloat("CA_THR_F", 1.0f);
   addFloat("CA_THR_R", 1.0f);
   addFloat("CA_YAW_F", 1.0f);

@@ -27,6 +27,7 @@ esac
 
 "$project_root/tools/check_env.sh"
 "$project_root/tools/bootstrap.sh"
+python3 "$project_root/tools/fix_nsh_script_eof.py" --apps "$project_root/upstream/apps"
 
 nuttx="$project_root/upstream/nuttx"
 board_config="$project_root/platform/$NUTTX_BOARD/configs/$NUTTX_CONFIG/defconfig"
@@ -41,7 +42,7 @@ python3 "$project_root/tools/generate_messages.py" \
     --input "$project_root/msg" --output "$generated_msg"
 rm -rf "$robot_app"
 mkdir -p "$robot_app"
-cp -R "$project_root/apps/cboard/." "$robot_app/"
+cp -R "$project_root/config/nuttx/." "$robot_app/"
 cp -R "$generated_msg" "$robot_app/msg"
 cp -R "$project_root/robot" "$robot_app/robot"
 cp -R "$project_root/protocol" "$robot_app/protocol"

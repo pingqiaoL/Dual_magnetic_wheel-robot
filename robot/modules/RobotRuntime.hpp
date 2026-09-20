@@ -25,8 +25,8 @@ public:
   /** 在线程中解析参数并创建 RobotRuntime 对象。 */
   static RobotRuntime *instantiate(int argc, char *argv[]);
 
-  /** 处理 start、stop、status 之外的模块命令。 */
-  static int custom_command(int argc, char *argv[]);
+  /** 返回统一命令路由使用的固定模块名称。 */
+  static const char *command_name() { return "robot"; }
 
   /** 打印 robot 命令的用法和可用子命令。 */
   static int print_usage(const char *reason = nullptr);
@@ -38,6 +38,8 @@ public:
   void run() override;
 
 private:
+  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
+  friend class CommandRouter;
   static constexpr uint64_t InitializationNoticeIntervalUs = 2000000ULL;
 
   /** 标记rcS中的所有模块启动命令已经执行完成。 */

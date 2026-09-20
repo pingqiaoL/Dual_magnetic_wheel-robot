@@ -3,6 +3,12 @@
  * @brief 实现遥控校准、功能映射、信号有效性判断和手动控制 topic 发布。
  */
 
+// NuttX Make对命令源文件定义main宏；显式命名入口无需重命名，
+// 取消该宏以避免改写ModuleBase::main等C++成员名称。
+#ifdef main
+#undef main
+#endif
+
 #include "robot/modules/RcUpdate.hpp"
 
 #include "robot/os/Clock.hpp"
@@ -29,7 +35,7 @@ RcUpdate::RcUpdate()
 int RcUpdate::task_spawn(int argc, char *argv[])
 {
   const int taskId = os::Task::spawn("rc_update", 110, 4096,
-                                     &run_trampoline, argc, argv);
+                                     &run_trampoline, argc, argv)
   if (taskId < 0)
     {
       __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
@@ -46,14 +52,6 @@ RcUpdate *RcUpdate::instantiate(int argc, char *argv[])
   (void)argc;
   (void)argv;
   return new RcUpdate();
-}
-
-/** 当前没有额外命令，未知输入统一显示帮助。 */
-int RcUpdate::custom_command(int argc, char *argv[])
-{
-  (void)argc;
-  (void)argv;
-  return print_usage("unknown command");
 }
 
 /** 打印 rc_update 的标准生命周期命令。 */
@@ -273,4 +271,10 @@ float RcUpdate::functionValue(const RcChannels &channels, uint8_t function,
     }
 
   return channels.channels[channel];
+}
+
+/** 提供NSH的rc_update命令入口，转交ModuleBase统一处理生命周期。 */
+extern "C" int rc_update_main(int argc, char *argv[])
+{
+  return RcUpdate::main(argc, argv);
 }

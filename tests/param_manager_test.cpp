@@ -46,7 +46,7 @@ int main()
   MemoryParamStorage storage;
   ParamManager &manager = ParamManager::instance();
   assert(manager.initialize(storage));
-  assert(manager.count() == 142);
+  assert(manager.count() == 144);
 
   const ParamHandle minimum = manager.find("RC1_MIN");
   const ParamHandle rollMap = manager.find("RC_MAP_ROLL");
