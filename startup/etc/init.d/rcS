@@ -12,6 +12,12 @@ rc_update start
 echo "Starting MK32 SBUS input"
 sbus_input start -d /dev/ttyS2
 
+echo "Starting RC loss failsafe"
+failsafe start
+
+echo "Starting robot setpoint generation"
+robot_control start
+
 echo "Starting control allocation"
 control_allocator start
 

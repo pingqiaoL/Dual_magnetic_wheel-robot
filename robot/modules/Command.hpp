@@ -5,9 +5,11 @@
 #include "robot/common/ModuleBase.hpp"
 #include "robot/control/ArmSafety.hpp"
 #include "robot/orb/Topics.hpp"
+#include "robot/params/ModuleParams.hpp"
+#include "robot/params/Param.hpp"
 
 /** 独立的安全管理任务；扩展命令实现集中在CommandRouter中。 */
-class Command final : public ModuleBase<Command>
+class Command final : public ModuleBase<Command>, public ModuleParams
 {
 public:
   /** 绑定遥控、开关和参数订阅，初始状态禁止解锁。 */
@@ -48,6 +50,7 @@ private:
   uorb::Subscription<ManualControlSwitches> _switchSubscription;
   uorb::Subscription<ParameterUpdate> _parameterSubscription;
   uorb::Publication<ActuatorArmed> _armedPublication;
+  ParamInt _paramArmSwitch;
   /** 保护运行线程和NSH状态查询之间的非原子缓存。 */
   os::Mutex _stateMutex;
   ManualControl _manual{};

@@ -93,7 +93,8 @@ g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
   tests/sbus_decoder_test.cpp \
   robot/drivers/rc/sbus.cpp \
   robot/modules/RcConfig.cpp \
-  robot/params/ParamManager.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/params/ModuleParams.cpp \
   robot/orb/Topics.cpp robot/os/Mutex.cpp robot/os/Clock.cpp \
   -pthread \
   -o build/tests/sbus_decoder_test.exe

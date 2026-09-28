@@ -11,6 +11,11 @@ $requiredFiles = @(
     'robot\params\ParamStorage.hpp',
     'robot\params\ParamManager.hpp',
     'robot\params\ParamManager.cpp',
+    'robot\params\ParamDefinitions.hpp',
+    'robot\params\ParamDefinitions.cpp',
+    'robot\params\ModuleParams.hpp',
+    'robot\params\ModuleParams.cpp',
+    'robot\params\Param.hpp',
     'robot\params\FlashParamStorage.hpp',
     'robot\params\FlashParamStorage.cpp',
     'robot\params\ParamSystem.hpp',
@@ -61,10 +66,19 @@ cd "$root"
 g++ -std=c++14 -Wall -Wextra -Werror -pthread \
   -I"$root/build/generated" -I"$root" \
   tests/param_manager_test.cpp \
-  robot/params/ParamManager.cpp robot/orb/Topics.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp \
   -o build/tests/param_manager_test.exe
 ./build/tests/param_manager_test.exe
+
+g++ -std=c++14 -Wall -Wextra -Werror -pthread \
+  -I"$root/build/generated" -I"$root" \
+  tests/module_params_test.cpp robot/params/ModuleParams.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/orb/Topics.cpp robot/os/Mutex.cpp robot/os/Clock.cpp \
+  -o build/tests/module_params_test.exe
+./build/tests/module_params_test.exe
 '@
 
 & $msysBash --login -c $testCommand

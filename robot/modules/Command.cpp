@@ -14,11 +14,13 @@ bool Command::_outputInhibited = false;
 
 /** 建立订阅并读取兼容的CA_ARM_SW参数。 */
 Command::Command()
-  : _manualSubscription(manualControlTopic()),
+  : ModuleParams(nullptr), _manualSubscription(manualControlTopic()),
     _switchSubscription(manualControlSwitchesTopic()),
     _parameterSubscription(parameterUpdateTopic()),
-    _armedPublication(actuatorArmedTopic())
+    _armedPublication(actuatorArmedTopic()),
+    _paramArmSwitch(this, "CA_ARM_SW", 1)
 {
+  (void)updateParams();
   updateParameters();
 }
 
@@ -82,8 +84,7 @@ bool Command::fresh(uint64_t timestamp, uint64_t now)
 /** 使用CA_ARM_SW选择rc_update已映射的第几路开关。 */
 void Command::updateParameters()
 {
-  int32_t mapping = 0;
-  (void)ParamManager::instance().get("CA_ARM_SW", mapping);
+  const int32_t mapping = _paramArmSwitch.get();
   if (_armSwitch != mapping)
     {
       _armSwitch = mapping;
@@ -134,7 +135,11 @@ void Command::update(uint64_t now)
   if (guard.locked())
     {
       ParameterUpdate update{};
-      if (_parameterSubscription.update(update)) { updateParameters(); }
+      if (_parameterSubscription.update(update))
+        {
+          (void)updateParams();
+          updateParameters();
+        }
       (void)_manualSubscription.update(_manual);
       (void)_switchSubscription.update(_switches);
       if (now == 0) { now = os::Clock::nowMicroseconds(); }

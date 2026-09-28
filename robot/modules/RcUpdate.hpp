@@ -8,6 +8,7 @@
 #include "robot/common/ModuleBase.hpp"
 #include "robot/modules/RcConfig.hpp"
 #include "robot/orb/Topics.hpp"
+#include "robot/params/ModuleParams.hpp"
 
 #include <stdint.h>
 
@@ -15,7 +16,7 @@
  * @class RcUpdate
  * @brief 订阅 input_rc，输出 rc_channels、manual_control_input 和开关状态。
  */
-class RcUpdate final : public ModuleBase<RcUpdate>
+class RcUpdate final : public ModuleBase<RcUpdate>, public ModuleParams
 {
 public:
   /** 绑定遥控链路所需的订阅器和发布器。 */

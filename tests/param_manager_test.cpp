@@ -46,16 +46,20 @@ int main()
   MemoryParamStorage storage;
   ParamManager &manager = ParamManager::instance();
   assert(manager.initialize(storage));
-  assert(manager.count() == 144);
+  assert(manager.count() == 154);
 
   const ParamHandle minimum = manager.find("RC1_MIN");
   const ParamHandle rollMap = manager.find("RC_MAP_ROLL");
   const ParamHandle steeringCommandMax = manager.find("CAN_S0_PMAX");
   const ParamHandle steeringFeedbackMax = manager.find("CAN_S0_PFBMAX");
+  const ParamHandle steeringFunction = manager.find("CAN_S0_FUNC");
+  const ParamHandle failsafeMotorAction = manager.find("FS_MOT_ACT");
   assert(minimum != ParamInvalid);
   assert(rollMap != ParamInvalid);
   assert(steeringCommandMax != ParamInvalid);
   assert(steeringFeedbackMax != ParamInvalid);
+  assert(steeringFunction != ParamInvalid);
+  assert(failsafeMotorAction != ParamInvalid);
   assert(manager.find("DOES_NOT_EXIST") == ParamInvalid);
 
   float floatValue = 0.0f;

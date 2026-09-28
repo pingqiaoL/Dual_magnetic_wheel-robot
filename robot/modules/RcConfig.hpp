@@ -7,6 +7,7 @@
 
 #include "msg/InputRc.hpp"
 #include "msg/RcChannels.hpp"
+#include "robot/params/ModuleParams.hpp"
 
 #include <stdint.h>
 
@@ -30,13 +31,13 @@ struct RcChannelCalibration
  * 第一版使用内存默认值；后续 Param/Flash 模块将更新这些字段，而 rc_update
  * 的归一化代码无需改变。
  */
-class RcConfig
+class RcConfig : public ModuleParams
 {
 public:
   static constexpr uint8_t Unmapped = 0xff;
 
   /** 创建默认 1000/1500/2000 校准和 MK32 通道映射。 */
-  RcConfig();
+  explicit RcConfig(ModuleParams *parent = nullptr);
 
   /** 从 ParamManager 重新读取全部 RC 校准值和功能映射。 */
   bool refresh();
@@ -51,6 +52,8 @@ public:
   bool valid() const;
 
 private:
+  /** 参数树更新时一次刷新全部数组句柄对应的缓存。 */
+  bool updateParamsImpl() override { return refresh(); }
   RcChannelCalibration _calibration[InputRc::MAX_CHANNELS];
   uint8_t _functionChannel[RcChannels::FUNCTION_COUNT];
 };

@@ -11,7 +11,8 @@ New-Item -ItemType Directory -Force -Path $testDirectory | Out-Null
 $rcS = Get-Content -LiteralPath (
     Join-Path $projectRoot 'startup\etc\init.d\rcS') -Raw
 foreach ($command in @('source /etc/init.d/rc.autostart',
-        'control_allocator start', 'can_output start -d /dev/can0',
+        'failsafe start', 'robot_control start', 'control_allocator start',
+        'can_output start -d /dev/can0',
         'command start', 'robot ready')) {
     if ($rcS -notmatch [regex]::Escape($command)) {
         throw "rcS is missing command: $command"
@@ -29,6 +30,17 @@ $profile = Get-Content -LiteralPath (
     Join-Path $projectRoot 'startup\etc\robots\1_dual_magneticwheel') -Raw
 if ($profile -notmatch 'param set CA_AIRFRAME 1') {
     throw 'Numbered profile must select its actuator model.'
+}
+foreach ($default in @('CAN_M0_FUNC 101', 'CAN_M1_FUNC 102',
+        'CAN_S0_FUNC 201', 'CAN_S1_FUNC 202', 'FS_MOT_ACT 1',
+        'FS_STR_ACT 0', 'OUT_FAIL_ACT 2')) {
+    if ($profile -notmatch [regex]::Escape($default)) {
+        throw "Numbered profile is missing default: $default"
+    }
+}
+if (-not (Test-Path -LiteralPath (
+        Join-Path $projectRoot 'robot\output\OutputFunction.hpp'))) {
+    throw 'OutputFunction routing definition is missing.'
 }
 # NSH短行缓冲区按UTF-8字节检查，避免注释截断后当成命令执行。
 Get-ChildItem -LiteralPath (Join-Path $projectRoot 'startup\etc') -Recurse -File |
@@ -49,7 +61,8 @@ Get-ChildItem -LiteralPath (Join-Path $projectRoot 'startup\etc') -Recurse -File
 if ($LASTEXITCODE -ne 0) { throw 'uORB message generation failed.' }
 
 foreach ($header in @('ActuatorMotors.hpp', 'ActuatorServos.hpp',
-        'ActuatorStatus.hpp', 'ActuatorArmed.hpp')) {
+        'ActuatorStatus.hpp', 'ActuatorArmed.hpp', 'FailsafeStatus.hpp',
+        'RobotControlSetpoint.hpp')) {
     if (-not (Test-Path -LiteralPath (Join-Path $generated $header))) {
         throw "Generated message is missing: $header"
     }
@@ -76,7 +89,8 @@ g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
   tests/climbot_allocation_test.cpp robot/control/Allocation.cpp \
   robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
-  robot/params/ParamManager.cpp robot/orb/Topics.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
   -o build/tests/climbot_allocation_test.exe
 ./build/tests/climbot_allocation_test.exe
@@ -86,14 +100,26 @@ g++ -std=c++14 -Wall -Wextra -Werror \
   tests/output_chain_test.cpp robot/modules/Command.cpp \
   robot/output/MixingOutput.cpp robot/control/Allocation.cpp \
   robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
-  robot/params/ParamManager.cpp robot/orb/Topics.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
   -o build/tests/output_chain_test.exe
 ./build/tests/output_chain_test.exe
 
+g++ -std=c++14 -Wall -Wextra -Werror \
+  -I"$root/build/generated" -I"$root" \
+  tests/failsafe_test.cpp robot/modules/Failsafe.cpp \
+  robot/modules/RobotControl.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
+  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  -o build/tests/failsafe_test.exe
+./build/tests/failsafe_test.exe
+
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
   tests/param_command_test.cpp robot/params/param_main.cpp \
-  robot/params/ParamManager.cpp robot/orb/Topics.cpp \
+  robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
+  robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
   -o build/tests/param_command_test.exe
 ./build/tests/param_command_test.exe

@@ -23,7 +23,7 @@ int main()
   assert(!safety.update(true, ManualControlSwitches::POSITION_MIDDLE));
   assert(safety.update(true, ManualControlSwitches::POSITION_ON));
   assert(safety.update(true, ManualControlSwitches::POSITION_ON));
-  assert(!safety.update(false, ManualControlSwitches::POSITION_ON));
+  assert(safety.update(false, ManualControlSwitches::POSITION_ON));
   assert(!safety.waitingForOff());
   assert(safety.update(true, ManualControlSwitches::POSITION_ON));
   assert(!safety.update(true, ManualControlSwitches::POSITION_OFF));

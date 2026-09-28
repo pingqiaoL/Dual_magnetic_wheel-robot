@@ -5,6 +5,7 @@
 #include "robot/configuration/RobotConfiguration.hpp"
 #include "msg/ActuatorMotors.hpp"
 #include "msg/ActuatorServos.hpp"
+#include "robot/params/ModuleParams.hpp"
 
 /** 每行对应一个执行器，两列依次对应前进输入和偏航输入。 */
 struct AllocationMatrix
@@ -15,9 +16,11 @@ struct AllocationMatrix
 };
 
 /** 构型模型父类，继承执行器统计接口，让分配任务不依赖具体机型。 */
-class ActuatorEffectiveness : public RobotConfiguration
+class ActuatorEffectiveness : public RobotConfiguration, public ModuleParams
 {
 public:
+  explicit ActuatorEffectiveness(ModuleParams *parent = nullptr)
+      : ModuleParams(parent) {}
   /** 通过父类指针安全释放构型子类。 */
   ~ActuatorEffectiveness() override = default;
   /** 根据构型参数生成直接分配矩阵；行顺序为电机后舵机。

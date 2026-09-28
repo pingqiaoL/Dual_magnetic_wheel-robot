@@ -11,8 +11,8 @@
  * @class ArmSafety
  * @brief 上电后要求先观察到安全开关关闭，随后按开关电平控制使能。
  *
- * 上电检查完成后不会因遥控信号暂时丢失而重新执行。信号无效时仍会
- * 立即失能，恢复后根据SA的当前位置重新决定是否使能。
+ * 上电检查完成后不会因遥控信号暂时丢失而重新执行。已经解锁后信号
+ * 无效会保持解锁状态；控制分配器将动力指令归零并保持其他目标。
  */
 class ArmSafety
 {
@@ -39,11 +39,8 @@ public:
   {
     if (!valid)
       {
-        if (_state == State::Armed)
-          {
-            _state = State::ReadyForOn;
-          }
-        return false;
+        // 链路丢失不改变已经确定的SA状态；上电尚未通过时仍保持禁止。
+        return _state == State::Armed;
       }
 
     if (_state == State::WaitForOff)

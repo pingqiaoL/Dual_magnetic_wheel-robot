@@ -23,6 +23,11 @@
 #include <string.h>
 #include <unistd.h>
 
+/** 四个CAN物理槽位各自的逻辑功能参数名。 */
+static const char *const CanFunctionParams[] = {
+  "CAN_M0_FUNC", "CAN_M1_FUNC", "CAN_S0_FUNC", "CAN_S1_FUNC"
+};
+
 /** 把控制量限制在归一化输出范围。 */
 float CanOutput::constrainUnit(float value)
 {
@@ -55,8 +60,8 @@ const char *CanOutput::modeName(DamiaoMode mode)
 
 /** 保存设备路径并绑定执行器、参数和状态 topic。 */
 CanOutput::CanOutput(const char *devicePath)
-    : _canFd(-1),
-      _mixingOutput(*this, MotorCount, ServoCount),
+    : ModuleParams(nullptr), _canFd(-1),
+      _mixingOutput(this, *this, CanFunctionParams, ChannelCount),
       _parameterSubscription(parameterUpdateTopic()),
       _statusPublication(actuatorStatusTopic()),
       _lastStatusPublish(0),
@@ -133,7 +138,7 @@ int CanOutput::print_usage(const char *reason)
 /** 打开 NuttX CAN 字符设备并加载参数配置。 */
 bool CanOutput::init()
 {
-  _parametersValid = refreshParameters();
+  _parametersValid = updateParams();
   if (!_parametersValid)
     {
       fprintf(stderr, "invalid CAN output parameters\n");
@@ -150,15 +155,15 @@ bool CanOutput::init()
 }
 
 /** 遍历指定类型的输出并按各通道配置选择协议。 */
-bool CanOutput::updateOutputs(ActuatorType type, bool stopMotors,
-                              const float *outputs, uint8_t count,
+bool CanOutput::updateOutputs(bool stopOutputs, const float *outputs,
+                              uint8_t count,
                               uint64_t now)
 {
   (void)now;
   os::LockGuard outputGuard(_outputMutex);
   if (!outputGuard.locked()) { return false; }
   // MixingOutput决定是否停止；驱动只把停止状态转换为真实管理帧。
-  if (stopMotors)
+  if (stopOutputs)
     {
       if (!__atomic_load_n(&_protocolArmed, __ATOMIC_ACQUIRE) && !_disablePending)
         { return true; }
@@ -180,15 +185,12 @@ bool CanOutput::updateOutputs(ActuatorType type, bool stopMotors,
       if (!sendSpecialAll(0xfc)) { return false; }
     }
 
-  const uint8_t maximum = type == ActuatorType::Motor ? MotorCount : ServoCount;
-  if (count > maximum)
-    {
-      count = maximum;
-    }
+  if (count > ChannelCount) { count = ChannelCount; }
 
   bool success = true;
   for (uint8_t index = 0; index < count; ++index)
     {
+      if (!_mixingOutput.isFunctionSet(index)) { continue; }
       CanChannelConfig config;
       {
         os::LockGuard guard(_configurationMutex);
@@ -196,10 +198,7 @@ bool CanOutput::updateOutputs(ActuatorType type, bool stopMotors,
           {
             return false;
           }
-        const uint8_t channel = type == ActuatorType::Motor
-                                    ? index
-                                    : static_cast<uint8_t>(MotorCount + index);
-        config = _channels[channel];
+        config = _channels[index];
       }
       success = sendOne(config, outputs[index]) && success;
     }
@@ -235,15 +234,14 @@ void CanOutput::run()
       if (_parameterSubscription.update(update))
         {
           // 必须先停止旧配置，停止发送成功后才能切换ID及协议。
-          const bool stopped = updateOutputs(ActuatorType::Motor, true,
-                                             nullptr, 0, now);
-          if (stopped) { _parametersValid = refreshParameters(); }
+          const bool stopped = updateOutputs(true, nullptr, 0, now);
+          if (stopped)
+            { _parametersValid = updateParams(); }
           else { _parametersValid = false; _reloadPending = true; }
         }
-      if (_reloadPending && updateOutputs(ActuatorType::Motor, true,
-                                           nullptr, 0, now))
+      if (_reloadPending && updateOutputs(true, nullptr, 0, now))
         {
-          _parametersValid = refreshParameters();
+          _parametersValid = updateParams();
           _reloadPending = false;
         }
       (void)_mixingOutput.update();
@@ -512,14 +510,17 @@ bool CanOutput::sendSpecialAll(uint8_t command)
   bool success = true;
   for (uint8_t index = 0; index < MotorCount; ++index)
     {
-      success = sendSpecial(ActuatorType::Motor, index, command) && success;
+      if (command != 0xfc || _mixingOutput.isFunctionSet(index))
+        { success = sendSpecial(ActuatorType::Motor, index, command) && success; }
       // NuttX CAN 设备以非阻塞方式打开。管理帧之间留出队列排空时间，
       // 防止连续四帧时排在最后的后转向电机收不到使能命令。
       os::Clock::sleepMilliseconds(2);
     }
   for (uint8_t index = 0; index < ServoCount; ++index)
     {
-      success = sendSpecial(ActuatorType::Servo, index, command) && success;
+      const uint8_t channel = static_cast<uint8_t>(MotorCount + index);
+      if (command != 0xfc || _mixingOutput.isFunctionSet(channel))
+        { success = sendSpecial(ActuatorType::Servo, index, command) && success; }
       os::Clock::sleepMilliseconds(2);
     }
   return success;
@@ -580,8 +581,9 @@ void CanOutput::printMap()
       const CanChannelConfig &config = _channels[index];
       const bool motor = index < MotorCount;
       const uint8_t localIndex = motor ? index : index - MotorCount;
-      printf("%s %u: %s id=%u fbid=%u mode=%s\n",
+      printf("%s %u: function=%s protocol=%s id=%u fbid=%u mode=%s\n",
              motor ? "motor" : "servo", localIndex,
+             outputFunctionName(_mixingOutput.function(index)),
              protocolName(config.protocol), config.motorId,
              config.feedbackId, modeName(config.mode));
       if (!motor)

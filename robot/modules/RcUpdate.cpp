@@ -17,7 +17,8 @@
 
 /** 初始化 uORB 端点和 RC 链路状态。 */
 RcUpdate::RcUpdate()
-    : _inputSubscription(inputRcTopic()),
+    : ModuleParams(nullptr), _config(this),
+      _inputSubscription(inputRcTopic()),
       _parameterSubscription(parameterUpdateTopic()),
       _channelsPublication(rcChannelsTopic()),
       _manualPublication(manualControlTopic()),
@@ -35,7 +36,7 @@ RcUpdate::RcUpdate()
 int RcUpdate::task_spawn(int argc, char *argv[])
 {
   const int taskId = os::Task::spawn("rc_update", 110, 4096,
-                                     &run_trampoline, argc, argv)
+                                     &run_trampoline, argc, argv);
   if (taskId < 0)
     {
       __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
@@ -117,7 +118,7 @@ void RcUpdate::run()
       ParameterUpdate parameterUpdate;
       if (_parameterSubscription.update(parameterUpdate))
         {
-          (void)_config.refresh();
+          (void)updateParams();
         }
 
       InputRc input;

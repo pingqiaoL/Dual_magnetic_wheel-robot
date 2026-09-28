@@ -45,6 +45,14 @@ config CBOARD_COMMAND_PROGNAME
 	string "Safety and command management command name"
 	default "command"
 
+config CBOARD_FAILSAFE_PROGNAME
+	string "RC loss failsafe command name"
+	default "failsafe"
+
+config CBOARD_ROBOT_CONTROL_PROGNAME
+	string "Robot setpoint generator command name"
+	default "robot_control"
+
 endif
 
 endmenu

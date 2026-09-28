@@ -33,6 +33,20 @@ uorb::Topic<ManualControlSwitches> &manualControlSwitchesTopic()
   return topic;
 }
 
+/** 返回进程内唯一的failsafe_status topic。 */
+uorb::Topic<FailsafeStatus> &failsafeStatusTopic()
+{
+  static uorb::Topic<FailsafeStatus> topic;
+  return topic;
+}
+
+/** 返回进程内唯一的robot_control_setpoint topic。 */
+uorb::Topic<RobotControlSetpoint> &robotControlSetpointTopic()
+{
+  static uorb::Topic<RobotControlSetpoint> topic;
+  return topic;
+}
+
 /** 返回进程内唯一的 parameter_update topic。 */
 uorb::Topic<ParameterUpdate> &parameterUpdateTopic()
 {

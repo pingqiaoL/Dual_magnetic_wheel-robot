@@ -45,7 +45,7 @@ Windows 上若没有完整的 WSL 工具链，`build.ps1` 会自动使用 `C:\ms
 2. 烧录 `artifacts/nuttx.hex`，复位后确认 RGB LED 从蓝色启动状态进入绿色运行状态。
 3. 串口工具选择 115200-8-N-1，确认看到 `nsh>`。
 4. 执行 `uname -a`、`free`、`ps`、`ls /proc`，保存输出作为 BSP 验收记录。
-5. 运行按键测试应用前，用万用表再次确认 PA0 按下接地。
+
 
 Windows 连接 USB 转 TTL 后，也可以自动执行串口验收并保存日志：
 

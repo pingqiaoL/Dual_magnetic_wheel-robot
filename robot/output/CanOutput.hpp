@@ -12,6 +12,7 @@
 #include "robot/os/Mutex.hpp"
 #include "robot/output/OutputInterface.hpp"
 #include "robot/output/MixingOutput.hpp"
+#include "robot/params/ModuleParams.hpp"
 
 #include <stdint.h>
 
@@ -31,7 +32,8 @@ struct CanChannelConfig
 };
 
 /** 订阅执行器 topic、选择协议并通过 NuttX CAN 驱动收发帧。 */
-class CanOutput final : public ModuleBase<CanOutput>, public OutputInterface
+class CanOutput final : public ModuleBase<CanOutput>, public OutputInterface,
+                        public ModuleParams
 {
 public:
   explicit CanOutput(const char *devicePath);
@@ -44,11 +46,14 @@ public:
   static int print_usage(const char *reason = nullptr);
 
   bool init() override;
-  bool updateOutputs(ActuatorType type, bool stopMotors,
-                     const float *outputs, uint8_t count,
+  bool updateOutputs(bool stopOutputs, const float *outputs, uint8_t count,
                      uint64_t now) override;
   int print_status() override;
   void run() override;
+
+protected:
+  /** 参数树更新时原子替换四个CAN通道的协议缓存。 */
+  bool updateParamsImpl() override { return refreshParameters(); }
 
 private:
   /** 唯一扩展命令路由可以访问受保护的模块实例。 */

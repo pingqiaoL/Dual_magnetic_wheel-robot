@@ -15,7 +15,8 @@ Allocation::Allocation(ActuatorEffectiveness &effectiveness)
 bool Allocation::updateParameters()
 {
   AllocationMatrix matrix{};
-  _valid = _effectiveness.motorCount() <= ActuatorMotors::MAX_CONTROLS &&
+  _valid = _effectiveness.updateParams() &&
+           _effectiveness.motorCount() <= ActuatorMotors::MAX_CONTROLS &&
            _effectiveness.servoCount() <= ActuatorServos::MAX_CONTROLS &&
            _effectiveness.getAllocationMatrix(matrix);
   if (_valid) { _matrix = matrix; }

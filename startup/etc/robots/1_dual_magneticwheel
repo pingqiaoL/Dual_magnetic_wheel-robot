@@ -8,21 +8,34 @@ param set-default CA_YAW_F 1.0
 param set-default CA_YAW_R 0.0
 param set-default CA_ARM_SW 1
 
+# RC loss: stop drive motors, keep the last steering command.
+param set-default FS_RC_TMO 0.5
+param set-default FS_MOT_ACT 1
+param set-default FS_MOT_VAL 0.0
+param set-default FS_STR_ACT 0
+param set-default FS_STR_VAL 0.0
+
+# Neutralize invalid actuator data before physical disable.
+param set-default OUT_FAIL_ACT 2
+
 # Drive motors use Damiao velocity mode.
+param set-default CAN_M0_FUNC 101
 param set-default CAN_M0_PROTO 1
 param set-default CAN_M0_TYPE 2
 param set-default CAN_M0_MODE 3
+param set-default CAN_M1_FUNC 102
 param set-default CAN_M1_PROTO 1
 param set-default CAN_M1_TYPE 2
 param set-default CAN_M1_MODE 3
 
 # DM4310 steering motors use position-velocity mode.
+param set-default CAN_S0_FUNC 201
 param set-default CAN_S0_PROTO 1
 param set-default CAN_S0_TYPE 1
 param set-default CAN_S0_MODE 2
 param set-default CAN_S0_PFBMAX 12.5
+param set-default CAN_S1_FUNC 202
 param set-default CAN_S1_PROTO 1
 param set-default CAN_S1_TYPE 1
 param set-default CAN_S1_MODE 2
 param set-default CAN_S1_PFBMAX 12.5
-

@@ -13,12 +13,16 @@
 
 /** 模型归模块所有；Allocation只引用同一个模型，不再复制构型信息。 */
 ControlAllocator::ControlAllocator(int32_t modelId, ActuatorEffectiveness *effectiveness)
-  : _modelId(modelId), _effectiveness(effectiveness), _allocation(*effectiveness),
-    _manualSubscription(manualControlTopic()),
+  : ModuleParams(nullptr), _modelId(modelId),
+    _paramAirframe(this, "CA_AIRFRAME", 1),
+    _effectiveness(effectiveness), _allocation(*effectiveness),
+    _setpointSubscription(robotControlSetpointTopic()),
     _parameterSubscription(parameterUpdateTopic()),
     _motorsPublication(actuatorMotorsTopic()),
     _servosPublication(actuatorServosTopic())
 {
+  _effectiveness->setParent(this);
+  (void)updateParams();
   updateParameters();
 }
 
@@ -93,15 +97,15 @@ int ControlAllocator::print_status()
 /** 运行中改变编号先发布无效输出，停止并重新启动模块才创建新模型。 */
 void ControlAllocator::updateParameters()
 {
-  int32_t selected = 0;
-  const bool match = ParamManager::instance().get("CA_AIRFRAME", selected) &&
-                     selected == _modelId;
+  (void)updateParams();
+  const int32_t selected = _paramAirframe.get();
+  const bool match = selected == _modelId;
   if (!match && _modelValid)
     { printf("WARNING [control_allocator] model changed; restart allocator\n"); }
   _modelValid = match && _allocation.updateParameters();
 }
 
-/** 本任务只计算发布，解锁判断属于command和MixingOutput。 */
+/** 本任务只执行构型分配；RC丢失目标策略属于RobotControl。 */
 void ControlAllocator::run()
 {
   while (!should_exit())
@@ -112,12 +116,17 @@ void ControlAllocator::run()
           {
             ParameterUpdate update{};
             if (_parameterSubscription.update(update)) { updateParameters(); }
-            (void)_manualSubscription.update(_manual);
             const uint64_t now = os::Clock::nowMicroseconds();
-            ManualControl input = _manual;
-            input.valid = input.valid && _modelValid && input.timestampSample != 0 &&
-                          input.timestampSample <= now &&
-                          now - input.timestampSample <= 500000ULL;
+            (void)_setpointSubscription.update(_setpoint);
+            const bool freshSetpoint = _setpoint.timestamp != 0 &&
+                                       _setpoint.timestamp <= now &&
+                                       now - _setpoint.timestamp <= 500000ULL;
+            ManualControl input{};
+            input.timestamp = now;
+            input.timestampSample = _setpoint.timestampSample;
+            input.throttle = _setpoint.speed;
+            input.yaw = _setpoint.steering;
+            input.valid = _modelValid && _setpoint.valid && freshSetpoint;
             ActuatorMotors motors{};
             ActuatorServos servos{};
             _allocation.allocate(input, motors, servos);

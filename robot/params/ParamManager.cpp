@@ -4,6 +4,7 @@
  */
 
 #include "robot/params/ParamManager.hpp"
+#include "robot/params/ParamDefinitions.hpp"
 
 #include "robot/orb/Topics.hpp"
 #include "robot/os/Clock.hpp"
@@ -388,89 +389,7 @@ uint32_t ParamManager::storageSequence() const
 /** 注册 16 路校准参数、主控制映射、12 路开关映射和通道数。 */
 void ParamManager::buildDefinitions()
 {
-  char name[ParamNameLength];
-  for (unsigned channel = 1; channel <= 16; ++channel)
-    {
-      snprintf(name, sizeof(name), "RC%u_MIN", channel);
-      addFloat(name, 1000.0f);
-      snprintf(name, sizeof(name), "RC%u_MAX", channel);
-      addFloat(name, 2000.0f);
-      snprintf(name, sizeof(name), "RC%u_TRIM", channel);
-      addFloat(name, 1500.0f);
-      snprintf(name, sizeof(name), "RC%u_DZ", channel);
-      addFloat(name, 20.0f);
-      snprintf(name, sizeof(name), "RC%u_REV", channel);
-      addFloat(name, 1.0f);
-    }
-
-  addInt("RC_MAP_THROTTLE", 3);
-  addInt("RC_MAP_ROLL", 1);
-  addInt("RC_MAP_PITCH", 2);
-  addInt("RC_MAP_YAW", 4);
-
-  for (unsigned switchIndex = 1; switchIndex <= 12; ++switchIndex)
-    {
-      snprintf(name, sizeof(name), "RC_MAP_SW%u", switchIndex);
-      addInt(name, static_cast<int32_t>(switchIndex + 4U));
-    }
-
-  addInt("RC_CHAN_CNT", 16);
-
-  addInt("SYS_AUTOSTART", 1);
-  addInt("CA_AIRFRAME", 1);
-  addFloat("CA_THR_F", 1.0f);
-  addFloat("CA_THR_R", 1.0f);
-  addFloat("CA_YAW_F", 1.0f);
-  addFloat("CA_YAW_R", 0.0f);
-  addInt("CA_ARM_SW", 1);
-
-  for (unsigned index = 0; index < 2; ++index)
-    {
-      snprintf(name, sizeof(name), "CAN_M%u_PROTO", index);
-      addInt(name, 1);
-      snprintf(name, sizeof(name), "CAN_M%u_TYPE", index);
-      addInt(name, 2);
-      snprintf(name, sizeof(name), "CAN_M%u_ID", index);
-      addInt(name, static_cast<int32_t>(index + 1U));
-      snprintf(name, sizeof(name), "CAN_M%u_FBID", index);
-      addInt(name, 0);
-      snprintf(name, sizeof(name), "CAN_M%u_MODE", index);
-      addInt(name, 3);
-      snprintf(name, sizeof(name), "CAN_M%u_REV", index);
-      addFloat(name, 1.0f);
-      snprintf(name, sizeof(name), "CAN_M%u_PMAX", index);
-      addFloat(name, 12.5f);
-      snprintf(name, sizeof(name), "CAN_M%u_VMAX", index);
-      addFloat(name, 30.0f);
-      snprintf(name, sizeof(name), "CAN_M%u_TMAX", index);
-      addFloat(name, 10.0f);
-    }
-
-  for (unsigned index = 0; index < 2; ++index)
-    {
-      snprintf(name, sizeof(name), "CAN_S%u_PROTO", index);
-      addInt(name, 1);
-      snprintf(name, sizeof(name), "CAN_S%u_TYPE", index);
-      addInt(name, 1);
-      snprintf(name, sizeof(name), "CAN_S%u_ID", index);
-      addInt(name, static_cast<int32_t>(index + 3U));
-      snprintf(name, sizeof(name), "CAN_S%u_FBID", index);
-      addInt(name, 0);
-      snprintf(name, sizeof(name), "CAN_S%u_MODE", index);
-      addInt(name, 2);
-      snprintf(name, sizeof(name), "CAN_S%u_REV", index);
-      addFloat(name, 1.0f);
-      snprintf(name, sizeof(name), "CAN_S%u_PMIN", index);
-      addFloat(name, -1.0f);
-      snprintf(name, sizeof(name), "CAN_S%u_PMAX", index);
-      addFloat(name, 1.0f);
-      snprintf(name, sizeof(name), "CAN_S%u_PFBMAX", index);
-      addFloat(name, 12.5f);
-      snprintf(name, sizeof(name), "CAN_S%u_VMAX", index);
-      addFloat(name, 5.0f);
-      snprintf(name, sizeof(name), "CAN_S%u_TMAX", index);
-      addFloat(name, 10.0f);
-    }
+  buildParamDefinitions(*this);
 }
 
 /** 向参数表末尾添加 int32 默认值。 */

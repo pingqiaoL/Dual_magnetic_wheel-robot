@@ -5,6 +5,8 @@
 #include "robot/modules/Command.hpp"
 #include "robot/modules/RobotRuntime.hpp"
 #include "robot/modules/ControlAllocator.hpp"
+#include "robot/modules/Failsafe.hpp"
+#include "robot/modules/RobotControl.hpp"
 #include "robot/modules/SbusInput.hpp"
 #include "robot/modules/RcUpdate.hpp"
 #include "robot/output/CanOutput.hpp"
@@ -28,6 +30,10 @@ int CommandRouter::dispatch(const char *module, int argc, char *argv[])
     { return SbusInput::print_usage("unknown command"); }
   if (strcmp(module, "control_allocator") == 0)
     { return ControlAllocator::print_usage("unknown command"); }
+  if (strcmp(module, "failsafe") == 0)
+    { return Failsafe::print_usage("unknown command"); }
+  if (strcmp(module, "robot_control") == 0)
+    { return RobotControl::print_usage("unknown command"); }
   return Command::print_usage("unknown module");
 }
 
@@ -62,6 +68,9 @@ int CommandRouter::handleCommand(int argc, char *argv[])
   if (strcmp(argv[0], "can_output") == 0) { return CanOutput::main(argc, argv); }
   if (strcmp(argv[0], "control_allocator") == 0)
     { return ControlAllocator::main(argc, argv); }
+  if (strcmp(argv[0], "failsafe") == 0) { return Failsafe::main(argc, argv); }
+  if (strcmp(argv[0], "robot_control") == 0)
+    { return RobotControl::main(argc, argv); }
   if (strcmp(argv[0], "rc_update") == 0) { return RcUpdate::main(argc, argv); }
   if (strcmp(argv[0], "sbus_input") == 0) { return SbusInput::main(argc, argv); }
   if (strcmp(argv[0], "robot") == 0) { return RobotRuntime::main(argc, argv); }

@@ -9,11 +9,13 @@
 #include "msg/ActuatorMotors.hpp"
 #include "msg/ActuatorServos.hpp"
 #include "msg/ActuatorStatus.hpp"
+#include "msg/FailsafeStatus.hpp"
 #include "msg/InputRc.hpp"
 #include "msg/ManualControl.hpp"
 #include "msg/ManualControlSwitches.hpp"
 #include "msg/ParameterUpdate.hpp"
 #include "msg/RcChannels.hpp"
+#include "msg/RobotControlSetpoint.hpp"
 #include "robot/orb/uORB.hpp"
 
 /** 返回原始遥控输入 topic：input_rc。 */
@@ -27,6 +29,12 @@ uorb::Topic<ManualControl> &manualControlTopic();
 
 /** 返回遥控开关 topic：manual_control_switches。 */
 uorb::Topic<ManualControlSwitches> &manualControlSwitchesTopic();
+
+/** 返回Failsafe发布的RC故障标志topic。 */
+uorb::Topic<FailsafeStatus> &failsafeStatusTopic();
+
+/** 返回RobotControl生成的机器人控制目标topic。 */
+uorb::Topic<RobotControlSetpoint> &robotControlSetpointTopic();
 
 /** 返回参数变化通知 topic：parameter_update。 */
 uorb::Topic<ParameterUpdate> &parameterUpdateTopic();

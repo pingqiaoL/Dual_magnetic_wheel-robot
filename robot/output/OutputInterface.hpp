@@ -23,11 +23,11 @@ public:
   /** 打开并初始化底层输出设备。 */
   virtual bool init() = 0;
 
-  /** 由MixingOutput回调：stopMotors为true时停止该类型执行器。
-   * 停止回调的outputs可为nullptr且count为0；必须执行实际失能而非仅发送零值。
-   * 正常输出为-1到1，返回false时公共处理器会停止两类输出。
+  /** 由MixingOutput回调一次完整物理通道数组。
+   * stopOutputs为true时outputs可为nullptr且count为0，驱动必须执行真实失能。
+   * 正常输出按物理通道排列且范围为-1到1。
    */
-  virtual bool updateOutputs(ActuatorType type, bool stopMotors,
-                             const float *outputs, uint8_t count,
+  virtual bool updateOutputs(bool stopOutputs, const float *outputs,
+                             uint8_t count,
                              uint64_t now) = 0;
 };

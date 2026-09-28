@@ -3,11 +3,13 @@
  */
 #pragma once
 #include "robot/control/ActuatorEffectiveness.hpp"
+#include "robot/params/Param.hpp"
 
 /** CA_AIRFRAME=1对应的双磁轮构型模型。 */
 class ActuatorEffectivenessDualMagneticWheel final : public ActuatorEffectiveness
 {
 public:
+  ActuatorEffectivenessDualMagneticWheel();
   /** 返回用于状态输出的机型名称。 */
   const char *name() const override { return "climbot"; }
   /** 前后轮各一路速度执行器。 */
@@ -18,4 +20,10 @@ public:
   uint32_t reversibleMotorMask() const override { return 3; }
   /** 从CA_THR_F/R和CA_YAW_F/R生成分配矩阵。 */
   bool getAllocationMatrix(AllocationMatrix &matrix) const override;
+
+private:
+  ParamFloat _paramThrottleFront;
+  ParamFloat _paramThrottleRear;
+  ParamFloat _paramYawFront;
+  ParamFloat _paramYawRear;
 };

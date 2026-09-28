@@ -31,7 +31,7 @@ float constrain(float value, float minimum, float maximum)
 } // namespace
 
 /** 设置 MK32 默认映射：通道1到4为四个摇杆，通道5到16为开关。 */
-RcConfig::RcConfig()
+RcConfig::RcConfig(ModuleParams *parent) : ModuleParams(parent)
 {
   for (uint8_t function = 0; function < RcChannels::FUNCTION_COUNT;
        ++function)

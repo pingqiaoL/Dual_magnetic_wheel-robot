@@ -79,13 +79,14 @@ public:
   uint32_t storageSequence() const;
 
 private:
+  friend void buildParamDefinitions(ParamManager &manager);
   /** 按原始位模式比较参数值，避免浮点特殊值影响判断。 */
   static bool sameValue(const ParamValue &left, const ParamValue &right);
   ParamManager();
   ParamManager(const ParamManager &) = delete;
   ParamManager &operator=(const ParamManager &) = delete;
 
-  /** 构造本项目首批 RC 参数定义。 */
+  /** 从集中定义表构造本项目参数定义。 */
   void buildDefinitions();
 
   /** 注册一个 int32 参数。 */
