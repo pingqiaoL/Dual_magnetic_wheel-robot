@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2600" height="1640" viewBox="0 0 2600 1640"><rect width="100%" height="100%" fill="white"/>
+<text x="55" y="58" font-family="Microsoft YaHei,sans-serif" font-size="50" fill="#20354B" font-weight="700" text-anchor="start" dominant-baseline="central">磁轮机器人 · 独立遥控与录像版</text>
+<text x="55" y="111" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#66778A" font-weight="400" text-anchor="start" dominant-baseline="central">方案版：HT-10A + CBoard + 独立网络摄像头；不配置 Nano / Orin 与 MK32</text>
+<rect x="50" y="160" width="2500" height="550" rx="22" fill="none" stroke="#176EB2" stroke-width="3"/>
+<text x="74" y="198" font-family="Microsoft YaHei,sans-serif" font-size="34" fill="#176EB2" font-weight="700" text-anchor="start" dominant-baseline="central">① 运动控制链  ·  使用支持 SBUS 的匹配接收机</text>
+<rect x="85" y="295" width="410" height="165" rx="18" fill="#EDF6FD" stroke="#176EB2" stroke-width="3"/>
+<text x="290.0" y="333" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#176EB2" font-weight="700" text-anchor="middle" dominant-baseline="central">HT-10A 遥控器</text>
+<text x="290.0" y="379" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">摇杆：前进后退 / 转向</text>
+<text x="290.0" y="419" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">开关：解锁 / 推杆操作</text>
+<rect x="690" y="295" width="430" height="165" rx="18" fill="#EDF6FD" stroke="#176EB2" stroke-width="3"/>
+<text x="905.0" y="333" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#176EB2" font-weight="700" text-anchor="middle" dominant-baseline="central">匹配接收机</text>
+<text x="905.0" y="379" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">输出接口需确认</text>
+<text x="905.0" y="419" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">优先 SBUS，复用现有解析</text>
+<rect x="1370" y="255" width="700" height="290" rx="18" fill="#EDF6FD" stroke="#176EB2" stroke-width="3"/>
+<text x="1720.0" y="293" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#176EB2" font-weight="700" text-anchor="middle" dominant-baseline="central">大疆 C 板 · NuttX</text>
+<text x="1720.0" y="339" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">SbusInput / RcUpdate</text>
+<text x="1720.0" y="379" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">Command + Failsafe + RobotControl</text>
+<text x="1720.0" y="419" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">ControlAllocator + CanOutput</text>
+<text x="1720.0" y="459" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">标定、解锁、失联与分配</text>
+<rect x="2220" y="295" width="290" height="205" rx="18" fill="#EDF6FD" stroke="#176EB2" stroke-width="3"/>
+<text x="2365.0" y="333" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#176EB2" font-weight="700" text-anchor="middle" dominant-baseline="central">达妙电机</text>
+<text x="2365.0" y="379" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">2 路动力</text>
+<text x="2365.0" y="419" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">2 路转向</text>
+<text x="2365.0" y="459" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">CAN 模式控制</text>
+<polyline points="495,377 690,377" fill="none" stroke="#176EB2" stroke-width="4" />
+<polygon points="690,377 671.0,368.0 671.0,386.0" fill="#176EB2"/>
+<text x="590" y="343" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#176EB2" font-weight="400" text-anchor="middle" dominant-baseline="central">2.4 GHz</text>
+<polyline points="1120,377 1370,377" fill="none" stroke="#176EB2" stroke-width="4" />
+<polygon points="1370,377 1351.0,368.0 1351.0,386.0" fill="#176EB2"/>
+<text x="1245" y="340" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#176EB2" font-weight="400" text-anchor="middle" dominant-baseline="central">SBUS / 现有适配</text>
+<polyline points="2070,377 2220,377" fill="none" stroke="#176EB2" stroke-width="4" />
+<polygon points="2220,377 2201.0,368.0 2201.0,386.0" fill="#176EB2"/>
+<text x="2144" y="343" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#176EB2" font-weight="400" text-anchor="middle" dominant-baseline="central">CAN</text>
+<text x="1370" y="605" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#176EB2" font-weight="400" text-anchor="start" dominant-baseline="central">保留当前控制链；更换遥控后重新标定通道与开关</text>
+<text x="85" y="663" font-family="Microsoft YaHei,sans-serif" font-size="26" fill="#66778A" font-weight="400" text-anchor="start" dominant-baseline="central">接收机只有 PWM 时：需增加输入捕获模块或更换兼容 SBUS 接收机。</text>
+<rect x="50" y="750" width="2500" height="370" rx="22" fill="none" stroke="#23816B" stroke-width="3"/>
+<text x="74" y="788" font-family="Microsoft YaHei,sans-serif" font-size="34" fill="#23816B" font-weight="700" text-anchor="start" dominant-baseline="central">② 视频链  ·  摄像头独立工作，具体商品 SKU 待确认</text>
+<rect x="85" y="861" width="450" height="174" rx="18" fill="#EDF8F2" stroke="#23816B" stroke-width="3"/>
+<text x="310.0" y="899" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#23816B" font-weight="700" text-anchor="middle" dominant-baseline="central">独立网络摄像头</text>
+<text x="310.0" y="945" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">内置编码 / 网络 / TF 卡槽</text>
+<text x="310.0" y="985" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">仅供电即可运行：须确认</text>
+<rect x="925" y="830" width="410" height="133" rx="18" fill="#EDF8F2" stroke="#23816B" stroke-width="3"/>
+<text x="1130.0" y="868" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#23816B" font-weight="700" text-anchor="middle" dominant-baseline="central">TF 卡</text>
+<text x="1130.0" y="914" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">上电录像 / 断网继续：须确认</text>
+<rect x="925" y="983" width="410" height="107" rx="18" fill="#EDF8F2" stroke="#23816B" stroke-width="3"/>
+<text x="1130.0" y="1021" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#23816B" font-weight="700" text-anchor="middle" dominant-baseline="central">无线网络</text>
+<text x="1130.0" y="1067" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">Wi-Fi AP / 路由器 / 4G</text>
+<rect x="1790" y="902" width="630" height="152" rx="18" fill="#EDF8F2" stroke="#23816B" stroke-width="3"/>
+<text x="2105.0" y="940" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#23816B" font-weight="700" text-anchor="middle" dominant-baseline="central">手机 · 摄像头厂商 APP</text>
+<text x="2105.0" y="986" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">实时预览 / 录像回放 / 下载</text>
+<text x="2105.0" y="1026" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">不自动显示测厚或 C 板数据</text>
+<polyline points="535,910 690,910 690,897 925,897" fill="none" stroke="#23816B" stroke-width="4" />
+<polygon points="925,897 906.0,888.0 906.0,906.0" fill="#23816B"/>
+<text x="730" y="864" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#23816B" font-weight="400" text-anchor="middle" dominant-baseline="central">本地存储</text>
+<polyline points="535,975 750,975 750,1036 925,1036" fill="none" stroke="#23816B" stroke-width="4" />
+<polygon points="925,1036 906.0,1027.0 906.0,1045.0" fill="#23816B"/>
+<text x="665" y="946" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#23816B" font-weight="400" text-anchor="middle" dominant-baseline="central">视频传输</text>
+<polyline points="1335,1036 1560,1036 1560,978 1790,978" fill="none" stroke="#23816B" stroke-width="4" />
+<polygon points="1790,978 1771.0,969.0 1771.0,987.0" fill="#23816B"/>
+<text x="1500" y="1002" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#23816B" font-weight="400" text-anchor="middle" dominant-baseline="central">网络查看</text>
+<rect x="50" y="1160" width="2500" height="290" rx="22" fill="none" stroke="#C87B20" stroke-width="3"/>
+<text x="74" y="1198" font-family="Microsoft YaHei,sans-serif" font-size="34" fill="#C87B20" font-weight="700" text-anchor="start" dominant-baseline="central">③ 可选扩展  ·  需要新增驱动或明确设备协议</text>
+<rect x="85" y="1235" width="510" height="174" rx="18" fill="#FFF6E7" stroke="#C87B20" stroke-width="3"/>
+<text x="340.0" y="1273" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#C87B20" font-weight="700" text-anchor="middle" dominant-baseline="central">触碰 / 行程开关</text>
+<text x="340.0" y="1319" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">GPIO 输入 → C 板</text>
+<text x="340.0" y="1359" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">去抖 / 到位 / 超时</text>
+<rect x="700" y="1235" width="600" height="174" rx="18" fill="#FFF6E7" stroke="#C87B20" stroke-width="3"/>
+<text x="1000.0" y="1273" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#C87B20" font-weight="700" text-anchor="middle" dominant-baseline="central">电推杆</text>
+<text x="1000.0" y="1319" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">C 板 → 互锁继电器 / 驱动板</text>
+<text x="1000.0" y="1359" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">伸出 / 收回 / 停止</text>
+<rect x="1405" y="1235" width="510" height="174" rx="18" fill="#FFF6E7" stroke="#C87B20" stroke-width="3"/>
+<text x="1660.0" y="1273" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#C87B20" font-weight="700" text-anchor="middle" dominant-baseline="central">电池 BMS</text>
+<text x="1660.0" y="1319" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">CAN 协议与波特率待确认</text>
+<text x="1660.0" y="1359" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">SOC 读取不等于遥控屏显示</text>
+<rect x="2020" y="1235" width="490" height="174" rx="18" fill="#FFF6E7" stroke="#C87B20" stroke-width="3"/>
+<text x="2265.0" y="1273" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#C87B20" font-weight="700" text-anchor="middle" dominant-baseline="central">测厚数据采集</text>
+<text x="2265.0" y="1319" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">另定 RS485 / USB Host 路径</text>
+<text x="2265.0" y="1359" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#20354B" font-weight="400" text-anchor="middle" dominant-baseline="central">视频存储不等于数据存储</text>
+<text x="55" y="1505" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#20354B" font-weight="700" text-anchor="start" dominant-baseline="central">购买前要求演示：仅接电源 + 插 TF 卡 → 本地录像；手机查看；关掉手机 / 网络后继续录像。</text>
+<text x="55" y="1568" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#66778A" font-weight="400" text-anchor="start" dominant-baseline="central">控制与视频独立运行；手机 APP 不替代机器人上位机。所有“须确认”能力以所选型号实测为准。</text>
+</svg>

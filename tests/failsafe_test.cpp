@@ -3,7 +3,6 @@
  */
 #include "robot/modules/Failsafe.hpp"
 #include "robot/modules/RobotControl.hpp"
-#include "robot/common/CommandRouter.hpp"
 #include "robot/params/ParamManager.hpp"
 #include <assert.h>
 #include <math.h>
@@ -17,12 +16,6 @@ int os::Task::spawn(const char *, int, size_t, Entry, int, char *[])
 
 /** 主机单元测试不删除NuttX任务。 */
 int os::Task::terminate(int)
-{
-  return -1;
-}
-
-/** 生命周期扩展命令不属于本测试范围。 */
-int CommandRouter::dispatch(const char *, int, char *[])
 {
   return -1;
 }

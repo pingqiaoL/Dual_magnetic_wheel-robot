@@ -8,7 +8,7 @@
 #include "robot/params/ModuleParams.hpp"
 #include "robot/params/Param.hpp"
 
-/** 独立的安全管理任务；扩展命令实现集中在CommandRouter中。 */
+/** 独立的安全管理任务，并自行处理手动输出禁止扩展命令。 */
 class Command final : public ModuleBase<Command>, public ModuleParams
 {
 public:
@@ -18,10 +18,10 @@ public:
   static int task_spawn(int argc, char *argv[]);
   /** 创建安全管理对象，不接受额外启动参数。 */
   static Command *instantiate(int argc, char *argv[]);
-  /** 返回供统一扩展命令路由使用的固定模块名称。 */
-  static const char *command_name() { return "command"; }
   /** 输出命令帮助。 */
   static int print_usage(const char *reason = nullptr);
+  /** 处理enable和disable扩展命令。 */
+  static int custom_command(int argc, char *argv[]);
   /** 输出最新安全状态。 */
   int print_status() override;
   /** 单次读取并发布；默认读取后采时，主机验收可指定时间。 */
@@ -34,8 +34,6 @@ public:
   static bool outputInhibited();
 
 private:
-  /** 允许唯一命令路由访问模块内部管理操作。 */
-  friend class CommandRouter;
   /** 刷新安全开关编号；映射变化时重新要求OFF。 */
   void updateParameters();
   /** 验证输入有效性和时间，返回安全开关位置。 */

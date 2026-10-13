@@ -1,5 +1,7 @@
 #! /bin/nsh
-# A failed command stops this script before safety management starts.
+# Continue so RobotRuntime can report every failed module.
+set +e
+
 echo "Starting CBoard robot runtime"
 robot start
 
@@ -26,4 +28,3 @@ can_output start -d /dev/can0
 
 echo "Starting RC safety management"
 command start
-robot ready

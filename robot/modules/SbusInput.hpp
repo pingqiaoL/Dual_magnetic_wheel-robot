@@ -30,9 +30,6 @@ public:
   /** 解析 -d 参数、创建对象并打开 SBUS 串口。 */
   static SbusInput *instantiate(int argc, char *argv[]);
 
-  /** 返回统一命令路由使用的固定模块名称。 */
-  static const char *command_name() { return "sbus_input"; }
-
   /** 打印 sbus_input 命令帮助。 */
   static int print_usage(const char *reason = nullptr);
 
@@ -45,8 +42,6 @@ public:
 private:
   /** 从启动参数读取串口设备路径，默认使用ttyS2。 */
   static const char *parseDevicePath(int argc, char *argv[]);
-  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
-  friend class CommandRouter;
   /** 按 100000 波特率、8E2、非阻塞方式打开串口。 */
   bool initialize();
 
@@ -57,14 +52,17 @@ private:
   void publishLossIfNeeded(uint64_t timestamp);
 
   static constexpr uint64_t SignalTimeoutMicroseconds = 500000;
+  static constexpr uint64_t LinkWarningIntervalMicroseconds = 5000000;
 
   char _devicePath[32];
   int _fileDescriptor;
   SbusDecoder _decoder;
   uorb::Publication<InputRc> _publication;
-  InputRc _lastMessage;
+  InputRc _lastMessage{};
   uint64_t _lastSignalTimestamp;
   uint32_t _publishedFrames;
   uint32_t _readErrors;
   bool _lossPublished;
+  bool _everConnected;
+  uint64_t _lastLinkWarning;
 };

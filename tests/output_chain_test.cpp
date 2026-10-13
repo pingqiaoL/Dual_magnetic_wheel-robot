@@ -13,8 +13,6 @@
 int os::Task::spawn(const char *, int, size_t, Entry, int, char *[])
 { assert(false); return -1; }
 int os::Task::terminate(int) { assert(false); return -1; }
-int CommandRouter::dispatch(const char *, int, char *[])
-{ assert(false); return -1; }
 
 class RecordingOutput final : public OutputInterface
 {

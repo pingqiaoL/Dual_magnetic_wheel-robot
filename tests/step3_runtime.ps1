@@ -81,7 +81,7 @@ foreach ($requiredPattern in @(
     'template<class T>',
     'T::task_spawn',
     'T::instantiate',
-    'CommandRouter::dispatch',
+    'T::custom_command',
     'T::print_usage'
 )) {
     if ($moduleBase -notmatch [regex]::Escape($requiredPattern)) {
@@ -91,6 +91,8 @@ foreach ($requiredPattern in @(
 
 foreach ($removedFile in @(
     'robot\common\Module.cpp',
+    'robot\common\CommandRouter.hpp',
+    'robot\common\CommandRouter.cpp',
     'robot\common\Result.hpp',
     'robot\common\Result.cpp'
 )) {

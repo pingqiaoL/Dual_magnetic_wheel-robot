@@ -25,11 +25,11 @@ public:
   /** 在线程中解析参数并创建 RobotRuntime 对象。 */
   static RobotRuntime *instantiate(int argc, char *argv[]);
 
-  /** 返回统一命令路由使用的固定模块名称。 */
-  static const char *command_name() { return "robot"; }
-
   /** 打印 robot 命令的用法和可用子命令。 */
   static int print_usage(const char *reason = nullptr);
+
+  /** 处理手动robot ready诊断，并立即核验启动链中的所有必需模块。 */
+  static int custom_command(int argc, char *argv[]);
 
   /** 打印模块运行状态和已经执行的循环次数。 */
   int print_status() override;
@@ -38,19 +38,30 @@ public:
   void run() override;
 
 private:
-  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
-  friend class CommandRouter;
   static constexpr uint64_t InitializationNoticeIntervalUs = 2000000ULL;
+  static constexpr uint64_t InitializationFailureTimeoutUs = 5000000ULL;
 
-  /** 标记rcS中的所有模块启动命令已经执行完成。 */
+  /** 检查启动链中的必需模块；report为true时逐项打印缺失模块。 */
+  static bool requiredModulesRunning(bool report);
+
+  /** 标记全部必需模块均已进入运行状态。 */
   void markInitializationComplete();
+
+  /** 标记启动核验发现模块缺失，使周期提示不再误报为仍在启动。 */
+  void markInitializationFailed();
 
   /** 记录任务启动后已经完成的 100 ms 循环次数。 */
   uint32_t _loopCount;
 
-  /** rcS尚未调用 robot ready 时保持为false。 */
+  /** 全部必需模块尚未进入运行状态时保持为false。 */
   bool _initializationComplete;
+
+  /** 自动或手动核验超时后置位，提示用户查看缺失模块。 */
+  bool _initializationFailed;
 
   /** 记录上一次初始化进度提示时间。 */
   uint64_t _lastInitializationNotice;
+
+  /** 记录第一次运行初始化检查的时间，用于判断启动超时。 */
+  uint64_t _initializationStartedAt;
 };

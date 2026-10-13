@@ -49,6 +49,7 @@ ps
 
 ## 后续重构
 
-当前扩展命令统一转交CommandRouter，子类不再实现custom_command。
+ModuleBase把非生命周期命令转交子类的`custom_command()`；没有扩展命令的
+子类直接使用父类默认错误提示。
 Command安全模块通过actuator_armed发布解锁信息；完整启动顺序和文件职责见
 [执行器框架说明](step6-damiao-motor-framework.md)。

@@ -21,8 +21,6 @@ public:
   static int task_spawn(int argc, char *argv[]);
   /** 从CA_AIRFRAME创建模型，兼容旧的-c climbot选项。 */
   static ControlAllocator *instantiate(int argc, char *argv[]);
-  /** 提供统一路由使用的固定名称。 */
-  static const char *command_name() { return "control_allocator"; }
   /** 显示帮助。 */
   static int print_usage(const char *reason = nullptr);
   /** 显示当前构型和分配状态。 */

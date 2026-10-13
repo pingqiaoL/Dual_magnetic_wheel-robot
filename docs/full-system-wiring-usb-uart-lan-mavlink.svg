@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3200" height="2340" viewBox="0 0 3200 2340"><rect width="100%" height="100%" fill="#FAFCFF"/>
+<text x="65" y="65" font-family="Microsoft YaHei,sans-serif" font-size="54" fill="#24384C" font-weight="700" dominant-baseline="central" text-anchor="start">磁轮机器人 · 完整系统接线图</text>
+<text x="65" y="122" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="start">方案：Type-C 采集 / UART 测厚数传 / LAN 视频 / UART MAVLink / SBUS 遥控</text>
+<polyline points="1535,300 1535,205 2715,205 2715,300" fill="none" stroke="#2476BC" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2715,300 2725.0,278.0 2705.0,278.0" fill="#2476BC"/>
+<polygon points="1535,300 1545.0,278.0 1525.0,278.0" fill="#2476BC"/>
+<text x="2130" y="174" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#2476BC" font-weight="400" dominant-baseline="central" text-anchor="middle">视频：RTSP / RTP，经两端专用转接统一成 RJ45</text>
+<rect x="65" y="355" width="580" height="220" rx="22" fill="#ECF9FB" stroke="#118A9C" stroke-width="3"/>
+<text x="355.0" y="398" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#118A9C" font-weight="700" dominant-baseline="central" text-anchor="middle">USB 摄像头</text>
+<text x="355.0" y="453" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">当前 500 万 USB 相机</text>
+<text x="355.0" y="497" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">输出格式通过 V4L2 查询</text>
+<text x="355.0" y="541" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">MJPEG / 原始图像需在 Orin 编码</text>
+<rect x="65" y="735" width="580" height="220" rx="22" fill="#ECF9FB" stroke="#118A9C" stroke-width="3"/>
+<text x="355.0" y="778" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#118A9C" font-weight="700" dominant-baseline="central" text-anchor="middle">USB 测厚仪</text>
+<text x="355.0" y="833" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">读取厂家 USB 协议</text>
+<text x="355.0" y="877" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">由 Orin 解析厚度、时间与状态</text>
+<text x="355.0" y="921" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">USB 类型 / 驱动按实机确认</text>
+<rect x="1035" y="300" width="1035" height="835" rx="22" fill="#FFFFFF" stroke="#2476BC" stroke-width="3"/>
+<text x="1552" y="350" font-family="Microsoft YaHei,sans-serif" font-size="38" fill="#2476BC" font-weight="700" dominant-baseline="central" text-anchor="middle">达妙 DM-ORIN NX 载板 + 核心模组</text>
+<text x="1552" y="406" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="middle">Linux 上位机：视频服务 + 测厚采集 + 数据桥接</text>
+<rect x="1065" y="448" width="380" height="130" rx="22" fill="#ECF9FB" stroke="#118A9C" stroke-width="3"/>
+<text x="1255.0" y="491" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#118A9C" font-weight="700" dominant-baseline="central" text-anchor="middle">Type-C USB Host ①</text>
+<text x="1255.0" y="546" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">摄像头输入</text>
+<rect x="1065" y="767" width="380" height="130" rx="22" fill="#ECF9FB" stroke="#118A9C" stroke-width="3"/>
+<text x="1255.0" y="810" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#118A9C" font-weight="700" dominant-baseline="central" text-anchor="middle">Type-C USB Host ②</text>
+<text x="1255.0" y="865" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">测厚仪输入</text>
+<rect x="1490" y="448" width="550" height="164" rx="22" fill="#EFF6FD" stroke="#2476BC" stroke-width="3"/>
+<text x="1765.0" y="491" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#2476BC" font-weight="700" dominant-baseline="central" text-anchor="middle">网口 LAN</text>
+<text x="1765.0" y="546" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">载板接口 → 达妙 RJ45 转接板</text>
+<text x="1765.0" y="590" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">编码 / 转发视频 → RTSP 服务</text>
+<rect x="1490" y="648" width="550" height="164" rx="22" fill="#FFF5E9" stroke="#C97929" stroke-width="3"/>
+<text x="1765.0" y="691" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#C97929" font-weight="700" dominant-baseline="central" text-anchor="middle">UART0：天空端数传</text>
+<text x="1765.0" y="746" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">解析测厚数据 → 打包 → 串口发送</text>
+<text x="1765.0" y="790" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">TX / RX / GND，电平确认兼容</text>
+<rect x="1490" y="848" width="550" height="164" rx="22" fill="#F5EFFB" stroke="#7753B0" stroke-width="3"/>
+<text x="1765.0" y="891" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#7753B0" font-weight="700" dominant-baseline="central" text-anchor="middle">UART1：下位机通讯</text>
+<text x="1765.0" y="946" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">MAVLink 指令下发 / 状态回传</text>
+<text x="1765.0" y="990" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">3.3V TTL · TX / RX / GND</text>
+<text x="1552" y="1076" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="middle">USB 口需处于 Host 模式；UART 设备名按系统确认</text>
+<polyline points="645,490 1065,490" fill="none" stroke="#118A9C" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="1065,490 1043.0,480.0 1043.0,500.0" fill="#118A9C"/>
+<text x="855" y="455" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#118A9C" font-weight="400" dominant-baseline="central" text-anchor="middle">Type-C USB 数据线</text>
+<polyline points="645,832 1065,832" fill="none" stroke="#118A9C" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="1065,832 1043.0,822.0 1043.0,842.0" fill="#118A9C"/>
+<text x="855" y="795" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#118A9C" font-weight="400" dominant-baseline="central" text-anchor="middle">Type-C USB 数据线</text>
+<rect x="2390" y="300" width="650" height="600" rx="22" fill="#EFF6FD" stroke="#2476BC" stroke-width="3"/>
+<text x="2715.0" y="343" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#2476BC" font-weight="700" dominant-baseline="central" text-anchor="middle">MK32 天空端 / 接收机</text>
+<text x="2715.0" y="398" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">LAN &amp; PWR：8-pin 网络 / 电源接口</text>
+<text x="2715.0" y="442" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">专用分线 → RJ45：连接 Orin 网口</text>
+<text x="2715.0" y="486" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle"></text>
+<text x="2715.0" y="530" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">UART：4-pin 数传接口</text>
+<text x="2715.0" y="574" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">接 Orin UART0，传输测厚与状态</text>
+<text x="2715.0" y="618" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle"></text>
+<text x="2715.0" y="662" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">S.Bus Out：遥控信号输出</text>
+<text x="2715.0" y="706" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">Type-C 升级口不参与上述连接</text>
+<polyline points="2070,725 2390,725" fill="none" stroke="#C97929" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2390,725 2368.0,715.0 2368.0,735.0" fill="#C97929"/>
+<polygon points="2070,725 2092.0,735.0 2092.0,715.0" fill="#C97929"/>
+<text x="2228" y="653" font-family="Microsoft YaHei,sans-serif" font-size="30" fill="#C97929" font-weight="700" dominant-baseline="central" text-anchor="middle">UART 数传</text>
+<text x="2228" y="686" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#C97929" font-weight="400" dominant-baseline="central" text-anchor="middle">TX/RX 交叉 + GND</text>
+<text x="2228" y="782" font-family="Microsoft YaHei,sans-serif" font-size="24" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="middle">不接 5V / NC</text>
+<rect x="2390" y="1060" width="650" height="240" rx="22" fill="#EFF6FD" stroke="#2476BC" stroke-width="3"/>
+<text x="2715.0" y="1103" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#2476BC" font-weight="700" dominant-baseline="central" text-anchor="middle">MK32 遥控器 · 安卓 UI</text>
+<text x="2715.0" y="1158" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">视频：网络拉流 / 解码 / 主画面或小窗</text>
+<text x="2715.0" y="1202" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">测厚：接入思翼数传接口 / SDK</text>
+<text x="2715.0" y="1246" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">顶部状态 + 点击小窗切换布局</text>
+<polyline points="2715,900 2715,1060" fill="none" stroke="#2476BC" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2715,1060 2725.0,1038.0 2705.0,1038.0" fill="#2476BC"/>
+<polygon points="2715,900 2705.0,922.0 2725.0,922.0" fill="#2476BC"/>
+<text x="2535" y="965" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#2476BC" font-weight="700" dominant-baseline="central" text-anchor="middle">无线链路</text>
+<text x="2535" y="1010" font-family="Microsoft YaHei,sans-serif" font-size="24" fill="#2476BC" font-weight="400" dominant-baseline="central" text-anchor="middle">视频 / 数传 / 遥控</text>
+<polyline points="1552,1135 1552,1420" fill="none" stroke="#7753B0" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="1552,1420 1562.0,1398.0 1542.0,1398.0" fill="#7753B0"/>
+<polygon points="1552,1135 1542.0,1157.0 1562.0,1157.0" fill="#7753B0"/>
+<text x="1855" y="1205" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#7753B0" font-weight="700" dominant-baseline="central" text-anchor="middle">UART1 / C 板空闲 UART</text>
+<text x="1855" y="1255" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#7753B0" font-weight="400" dominant-baseline="central" text-anchor="middle">MAVLink：指令 / 心跳 / 状态</text>
+<text x="1855" y="1300" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="middle">两端波特率一致；避开 NSH 和 SBUS 口</text>
+<rect x="65" y="1160" width="900" height="950" rx="22" fill="#FFFFFF" stroke="#66778A" stroke-width="3"/>
+<text x="95" y="1206" font-family="Microsoft YaHei,sans-serif" font-size="32" fill="#24384C" font-weight="700" dominant-baseline="central" text-anchor="start">接线端子对照 · 只接信号与参考地</text>
+<text x="95" y="1272" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#C97929" font-weight="700" dominant-baseline="central" text-anchor="start">A. Orin UART0 / 天空端 UART</text>
+<text x="105" y="1333" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 1：RX    ←    天空端 TX</text>
+<text x="105" y="1379" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 2：TX    →    天空端 RX</text>
+<text x="105" y="1425" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 3：GND  —    天空端 GND</text>
+<text x="105" y="1471" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 4：5V 不接；天空端 NC 不接</text>
+<text x="95" y="1570" font-family="Microsoft YaHei,sans-serif" font-size="30" fill="#7753B0" font-weight="700" dominant-baseline="central" text-anchor="start">B. Orin UART1 / C 板 UART6（建议）</text>
+<text x="105" y="1631" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 1：RX    ←    C 板 2：TXD</text>
+<text x="105" y="1677" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 2：TX    →    C 板 3：RXD</text>
+<text x="105" y="1723" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 3：GND  —    C 板 1：GND</text>
+<text x="105" y="1769" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 4：5V 不接；UART6 为 3-pin 接口</text>
+<text x="95" y="1870" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="start">C 板外壳 UART1 标识对应 MCU UART6。</text>
+<text x="95" y="1920" font-family="Microsoft YaHei,sans-serif" font-size="26" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="start">UART6 若已占用，改选空闲串口并重配驱动。</text>
+<text x="95" y="1984" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#B44C52" font-weight="400" dominant-baseline="central" text-anchor="start">注意：天空端 UART 与 LAN 转接线虽可能</text>
+<text x="95" y="2029" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#B44C52" font-weight="400" dominant-baseline="central" text-anchor="start">同为 4-pin，功能不同，不可混插。</text>
+<rect x="1100" y="1420" width="1000" height="380" rx="22" fill="#EEF8F2" stroke="#2B8763" stroke-width="3"/>
+<text x="1600.0" y="1463" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#2B8763" font-weight="700" dominant-baseline="central" text-anchor="middle">大疆 C 板 · STM32 / NuttX</text>
+<text x="1600.0" y="1518" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">UART6：接 Orin UART1，运行 MAVLink 模块（待接入）</text>
+<text x="1600.0" y="1562" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">SBUS：沿用现有反相 / 电平适配与解析</text>
+<text x="1600.0" y="1606" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">执行：解锁、失联策略、控制分配、CAN 输出</text>
+<text x="1600.0" y="1650" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">GPIO：推杆继电器方向互锁、限位输入（待增加）</text>
+<polyline points="3040,825 3120,825 3120,1470 2100,1470" fill="none" stroke="#2B8763" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2100,1470 2122.0,1480.0 2122.0,1460.0" fill="#2B8763"/>
+<text x="2625" y="1418" font-family="Microsoft YaHei,sans-serif" font-size="25" fill="#2B8763" font-weight="400" dominant-baseline="central" text-anchor="middle">SBUS 直达 C 板：信号 + GND，NC 不接</text>
+<text x="2625" y="1374" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#2B8763" font-weight="700" dominant-baseline="central" text-anchor="middle">保留直接遥控路径</text>
+<rect x="2390" y="1575" width="650" height="205" rx="22" fill="#EEF8F2" stroke="#2B8763" stroke-width="3"/>
+<text x="2715.0" y="1618" font-family="Microsoft YaHei,sans-serif" font-size="35" fill="#2B8763" font-weight="700" dominant-baseline="central" text-anchor="middle">执行器与传感器</text>
+<text x="2715.0" y="1673" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">CAN → 2 路动力 + 2 路转向电机</text>
+<text x="2715.0" y="1717" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">GPIO → 继电器驱动板 → 电推杆</text>
+<text x="2715.0" y="1761" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="middle">触碰 / 行程开关 → GPIO 输入</text>
+<polyline points="2100,1680 2390,1680" fill="none" stroke="#2B8763" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2390,1680 2368.0,1670.0 2368.0,1690.0" fill="#2B8763"/>
+<polygon points="2100,1680 2122.0,1690.0 2122.0,1670.0" fill="#2B8763"/>
+<text x="2245" y="1638" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#2B8763" font-weight="400" dominant-baseline="central" text-anchor="middle">CAN / GPIO</text>
+<text x="2545" y="1820" font-family="Microsoft YaHei,sans-serif" font-size="24" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="middle">继电器、电机另接功率电源</text>
+<rect x="1100" y="1850" width="1940" height="260" rx="22" fill="#FFF4F4" stroke="#B44C52" stroke-width="3"/>
+<text x="1130" y="1897" font-family="Microsoft YaHei,sans-serif" font-size="31" fill="#B44C52" font-weight="700" dominant-baseline="central" text-anchor="start">供电：电池 / 配电分别供电；图中通信线不能代替功率电源</text>
+<text x="1130" y="1955" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">Orin 载板：12–28V  → XT30；C 板：8–28V → 电源输入</text>
+<text x="1130" y="2003" font-family="Microsoft YaHei,sans-serif" font-size="28" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">天空端：使用对应硬件版本的原厂供电 / PMU；电机、推杆：额定电源</text>
+<text x="1130" y="2054" font-family="Microsoft YaHei,sans-serif" font-size="26" fill="#B44C52" font-weight="400" dominant-baseline="central" text-anchor="start">USB 外设电流须在载板输出预算内；串口 TX/RX 不接 5V、12V 或 RS485。</text>
+<text x="65" y="2165" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="start">线色：青色 USB 采集  ·  蓝色网络视频  ·  橙色天空端 UART 数传  ·  紫色 UART MAVLink  ·  绿色遥控与执行</text>
+<text x="65" y="2225" font-family="Microsoft YaHei,sans-serif" font-size="29" fill="#24384C" font-weight="400" dominant-baseline="central" text-anchor="start">软件边界：Orin 需提供视频服务、测厚协议解析与数传桥接；MK32 UI 需接入视频播放器和数传接口。</text>
+<text x="65" y="2284" font-family="Microsoft YaHei,sans-serif" font-size="27" fill="#66778A" font-weight="400" dominant-baseline="central" text-anchor="start">方案图 / 2026-10-12：USB 采集、串口设备名与波特率均需实机确认；不代表新增通讯模块已经实现。</text>
+</svg>

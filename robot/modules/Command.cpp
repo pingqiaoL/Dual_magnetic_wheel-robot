@@ -8,6 +8,7 @@
 #include "robot/params/ParamManager.hpp"
 #include "robot/os/Clock.hpp"
 #include <stdio.h>
+#include <string.h>
 
 /** 所有输出共享的NSH禁止标志；修改及读取均使用原子操作。 */
 bool Command::_outputInhibited = false;
@@ -41,13 +42,25 @@ Command *Command::instantiate(int argc, char *argv[])
   return new Command();
 }
 
-/** 输出统一管理命令的帮助。 */
+/** 输出安全管理命令的帮助。 */
 int Command::print_usage(const char *reason)
 {
   if (reason != nullptr) { fprintf(stderr, "%s\n", reason); }
-  printf("usage: command {start|stop|status|enable|disable|"
-         "<module> <subcommand> [args]}\n");
+  printf("usage: command {start|stop|status|enable|disable}\n");
   return reason == nullptr ? 0 : -1;
+}
+
+/** 处理手动输出禁止；解除禁止仍不能绕过遥控SA互锁。 */
+int Command::custom_command(int argc, char *argv[])
+{
+  if (argc != 1 || (strcmp(argv[0], "enable") != 0 &&
+                    strcmp(argv[0], "disable") != 0))
+    { return print_usage("unknown command"); }
+  const bool inhibit = strcmp(argv[0], "disable") == 0;
+  setOutputInhibited(inhibit);
+  printf(inhibit ? "output inhibit active\n"
+                 : "output inhibit cleared; RC safety still required\n");
+  return 0;
 }
 
 /** 原子修改禁止标志，使各任务不会读取到竞争写入。 */
@@ -160,7 +173,7 @@ void Command::run()
   (void)_armedPublication.publish(stopped);
 }
 
-/** NSH入口交给ModuleBase管理任务生命周期与统一命令路由。 */
+/** NSH入口交给ModuleBase管理生命周期并回调本类扩展命令。 */
 extern "C" int command_main(int argc, char *argv[])
 {
   return Command::main(argc, argv);

@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2800" height="2170" viewBox="0 0 2800 2170">
+<rect width="100%" height="100%" fill="white"/>
+<text x="50" y="60" font-family="Microsoft YaHei, sans-serif" font-size="52" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">CBoard 磁轮机器人 · 软件框架</text>
+<text x="1970" y="65" font-family="Microsoft YaHei, sans-serif" font-size="25" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#56716C">当前源码  /  嵌套方框表示包含关系</text>
+<rect x="50" y="125" width="2700" height="180" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="68" y="154" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">接口层</text>
+<rect x="80" y="183" width="470" height="96" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="315.0" y="212.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">NSH 命令台</text>
+<text x="315.0" y="257.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">start / stop / status / param</text>
+<rect x="590" y="183" width="490" height="96" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="835.0" y="212.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">MK32 遥控输入</text>
+<text x="835.0" y="257.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">SBUS  ·  /dev/ttyS2</text>
+<rect x="1120" y="183" width="530" height="96" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1385.0" y="212.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">消息契约</text>
+<text x="1385.0" y="257.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">msg/*.msg  →  C++ 消息类型</text>
+<rect x="1690" y="183" width="490" height="96" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1935.0" y="212.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">CAN 设备接口</text>
+<text x="1935.0" y="257.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">/dev/can0</text>
+<rect x="2220" y="183" width="500" height="96" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2470.0" y="212.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">执行器反馈</text>
+<text x="2470.0" y="257.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">ActuatorStatus</text>
+<rect x="50" y="340" width="380" height="1210" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="68" y="369" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">工程构建与启动</text>
+<rect x="75" y="410" width="330" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="240.0" y="453.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">Kconfig / defconfig</text>
+<text x="240.0" y="498.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">功能选择、板级裁剪</text>
+<rect x="75" y="570" width="330" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="240.0" y="613.5" font-family="Microsoft YaHei, sans-serif" font-size="28" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">Makefile / Make.defs</text>
+<text x="240.0" y="658.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">NuttX 应用构建接入</text>
+<rect x="75" y="730" width="330" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="240.0" y="773.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">tools/</text>
+<text x="240.0" y="818.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">构建 / 烧录 / 消息生成</text>
+<rect x="75" y="890" width="330" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="240.0" y="933.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">rc.sysinit / rcS</text>
+<text x="240.0" y="978.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">系统初始化与模块启动</text>
+<rect x="75" y="1050" width="330" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="240.0" y="1093.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">rc.autostart</text>
+<text x="240.0" y="1138.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">按 SYS_AUTOSTART 选构型</text>
+<rect x="75" y="1210" width="330" height="150" fill="#DCECBA" stroke="#379E87" stroke-width="3"/>
+<text x="240.0" y="1266.0" font-family="Microsoft YaHei, sans-serif" font-size="26" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">1_dual_magneticwheel</text>
+<text x="240.0" y="1311.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">set-default 默认参数</text>
+<text x="240" y="1425" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">startup/ + config/</text>
+<text x="240" y="1472" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">构型选择与业务实现分离</text>
+<rect x="470" y="340" width="1770" height="1210" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="488" y="369" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">robot/ 核心软件</text>
+<rect x="495" y="402" width="1720" height="425" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="513" y="431" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">modules/ 运行模块  ·  并列任务，通过 uORB 通信</text>
+<rect x="520" y="465" width="405" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="722.5" y="512.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">SbusInput</text>
+<text x="722.5" y="557.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">读取与解析 SBUS</text>
+<rect x="940" y="465" width="405" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1142.5" y="512.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">RcUpdate</text>
+<text x="1142.5" y="557.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">通道标定、映射、归一化</text>
+<rect x="1360" y="465" width="405" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1562.5" y="512.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">Command</text>
+<text x="1562.5" y="557.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">上电 SA 互锁与解锁状态</text>
+<rect x="1780" y="465" width="405" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1982.5" y="512.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">Failsafe</text>
+<text x="1982.5" y="557.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">检测遥控丢失、发布标志</text>
+<rect x="520" y="630" width="545" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="792.5" y="677.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">RobotControl</text>
+<text x="792.5" y="722.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">按安全策略生成 setpoint</text>
+<rect x="1080" y="630" width="545" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1352.5" y="677.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ControlAllocator</text>
+<text x="1352.5" y="722.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">选择模型并分配逻辑输出</text>
+<rect x="1640" y="630" width="545" height="132" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1912.5" y="677.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">RobotRuntime</text>
+<text x="1912.5" y="722.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">核验模块启动与就绪状态</text>
+<text x="1355" y="799" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">RcConfig 是 RcUpdate 的参数组件；CanOutput 位于 output/，也是独立任务。</text>
+<rect x="495" y="853" width="840" height="402" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="513" y="882" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">configuration/ + control/  构型与分配</text>
+<rect x="520" y="915" width="790" height="81" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="915.0" y="936.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">RobotConfiguration</text>
+<text x="915.0" y="981.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">执行器类型与数量接口</text>
+<rect x="520" y="1013" width="790" height="91" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="915.0" y="1039.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ActuatorEffectiveness</text>
+<text x="915.0" y="1084.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">继承构型接口与 ModuleParams</text>
+<rect x="545" y="1122" width="490" height="108" fill="#DCECBA" stroke="#379E87" stroke-width="3"/>
+<text x="790.0" y="1157.0" font-family="Microsoft YaHei, sans-serif" font-size="21" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ActuatorEffectivenessDualMagneticWheel</text>
+<text x="790.0" y="1202.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">子类：2 路动力 + 2 路转向</text>
+<rect x="1050" y="1122" width="260" height="108" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1180.0" y="1157.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">Allocation</text>
+<text x="1180.0" y="1202.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">线性矩阵分配</text>
+<rect x="1360" y="853" width="855" height="402" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="1378" y="882" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">output/ + protocol/can/  执行器输出</text>
+<rect x="1385" y="915" width="805" height="237" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1405" y="946" font-family="Microsoft YaHei, sans-serif" font-size="30" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">CanOutput : OutputInterface</text>
+<text x="1405" y="987" font-family="Microsoft YaHei, sans-serif" font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#56716C">一个任务管理 4 路 CAN 执行器；按参数选择协议 / 模式 / ID</text>
+<rect x="1405" y="1020" width="765" height="111" fill="#DCECBA" stroke="#379E87" stroke-width="3"/>
+<text x="1787.5" y="1056.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">MixingOutput  ·  CanOutput 持有的成员</text>
+<text x="1787.5" y="1101.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">FUNC 映射 / 解锁与数据有效性检查 / 回调 updateOutputs()</text>
+<rect x="1385" y="1170" width="805" height="60" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1787.5" y="1200.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">DamiaoProtocol  ·  达妙协议编码与反馈解码</text>
+<rect x="495" y="1284" width="1720" height="100" fill="#DCECBA" stroke="#379E87" stroke-width="3"/>
+<text x="1355.0" y="1315.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">msg/ + robot/orb/  ·  uORB 发布订阅总线</text>
+<text x="1355.0" y="1360.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">InputRc / ManualControl / FailsafeStatus / RobotControlSetpoint / ActuatorMotors / ActuatorServos</text>
+<rect x="495" y="1410" width="840" height="100" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="915.0" y="1441.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">common/ModuleBase&lt;T&gt;</text>
+<text x="915.0" y="1486.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">模块生命周期与独立 NSH 命令入口</text>
+<rect x="1360" y="1410" width="855" height="100" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1787.5" y="1441.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">os/  操作系统适配</text>
+<text x="1787.5" y="1486.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">Task / Thread / Mutex / Semaphore / Clock</text>
+<rect x="2280" y="340" width="470" height="1210" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="2298" y="369" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">参数系统与验证工具</text>
+<rect x="2305" y="410" width="420" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="453.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ParamManager</text>
+<text x="2515.0" y="498.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">全局参数值、校验与通知</text>
+<rect x="2305" y="565" width="420" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="608.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ModuleParams</text>
+<text x="2515.0" y="653.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">模块与所属组件的参数树</text>
+<rect x="2305" y="720" width="420" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="763.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ParamInt / ParamFloat</text>
+<text x="2515.0" y="808.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">参数注册、句柄与缓存</text>
+<rect x="2305" y="875" width="420" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="918.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">FlashParamStorage</text>
+<text x="2515.0" y="963.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">参数持久化后端</text>
+<rect x="2305" y="1030" width="420" height="125" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="1073.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">ParamDefinitions</text>
+<text x="2515.0" y="1118.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">名称、类型、默认值</text>
+<rect x="2305" y="1185" width="420" height="125" fill="#E8ECEB" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="1228.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">tests/</text>
+<text x="2515.0" y="1273.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">分配 / 参数 / 安全 / 输出测试</text>
+<rect x="2305" y="1340" width="420" height="150" fill="#E8ECEB" stroke="#379E87" stroke-width="3"/>
+<text x="2515.0" y="1396.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">docs/</text>
+<text x="2515.0" y="1441.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">架构与接口、配置调试说明</text>
+<rect x="50" y="1590" width="2700" height="215" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="68" y="1619" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">操作系统与板级驱动层</text>
+<rect x="80" y="1654" width="490" height="116" fill="#FFE0A4" stroke="#379E87" stroke-width="3"/>
+<text x="325.0" y="1693.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">NuttX RTOS</text>
+<text x="325.0" y="1738.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">任务调度 / 同步 / 定时</text>
+<rect x="610" y="1654" width="490" height="116" fill="#FFE0A4" stroke="#379E87" stroke-width="3"/>
+<text x="855.0" y="1693.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">字符设备与文件系统</text>
+<text x="855.0" y="1738.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">read / write / ioctl / ROMFS</text>
+<rect x="1140" y="1654" width="510" height="116" fill="#FFE0A4" stroke="#379E87" stroke-width="3"/>
+<text x="1395.0" y="1693.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">platform/dji_cboard</text>
+<text x="1395.0" y="1738.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">启动、引脚、外设适配</text>
+<rect x="1690" y="1654" width="490" height="116" fill="#FFE0A4" stroke="#379E87" stroke-width="3"/>
+<text x="1935.0" y="1693.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">UART / CAN 驱动</text>
+<text x="1935.0" y="1738.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">SBUS 输入与电机收发</text>
+<rect x="2220" y="1654" width="500" height="116" fill="#FFE0A4" stroke="#379E87" stroke-width="3"/>
+<text x="2470.0" y="1693.0" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">Flash / 链接布局</text>
+<text x="2470.0" y="1738.0" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">ld.script 与参数存储区域</text>
+<rect x="50" y="1845" width="2700" height="177" fill="none" stroke="#379E87" stroke-width="2" stroke-dasharray="12 10"/>
+<text x="68" y="1874" font-family="Microsoft YaHei, sans-serif" font-size="27" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">硬件层</text>
+<rect x="80" y="1903" width="490" height="93" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="325.0" y="1930.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">STM32F407 · 大疆 C 板</text>
+<text x="325.0" y="1975.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">控制器</text>
+<rect x="610" y="1903" width="490" height="93" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="855.0" y="1930.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">MK32 天空端</text>
+<text x="855.0" y="1975.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">遥控接收</text>
+<rect x="1140" y="1903" width="510" height="93" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1395.0" y="1930.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">CAN 总线</text>
+<text x="1395.0" y="1975.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">设备通信</text>
+<rect x="1690" y="1903" width="490" height="93" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="1935.0" y="1930.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">DM3510 × 2</text>
+<text x="1935.0" y="1975.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">前后动力轮 · 速度模式</text>
+<rect x="2220" y="1903" width="500" height="93" fill="#F5FAF8" stroke="#379E87" stroke-width="3"/>
+<text x="2470.0" y="1930.5" font-family="Microsoft YaHei, sans-serif" font-size="29" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="#183D38">DM4310 × 2</text>
+<text x="2470.0" y="1975.5" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="middle" dominant-baseline="central" fill="#56716C">前后转向 · 位置速度模式</text>
+<text x="50" y="2075" font-family="Microsoft YaHei, sans-serif" font-size="25" font-weight="700" text-anchor="start" dominant-baseline="central" fill="#183D38">图例</text>
+<rect x="143" y="2060" width="32" height="28" fill="#DCECBA" stroke="#379E87" stroke-width="3"/>
+<text x="191" y="2075" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#183D38">核心组件</text>
+<rect x="365" y="2060" width="32" height="28" fill="#FFE0A4" stroke="#379E87" stroke-width="3"/>
+<text x="414" y="2075" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#183D38">系统与驱动</text>
+<rect x="620" y="2060" width="32" height="28" fill="#E8ECEB" stroke="#379E87" stroke-width="3"/>
+<text x="671" y="2075" font-family="Microsoft YaHei, sans-serif" font-size="23" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#183D38">开发支撑</text>
+<text x="1050" y="2075" font-family="Microsoft YaHei, sans-serif" font-size="24" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#56716C">虚线框：职责分组   实线框：模块或组件   嵌套框：对象包含</text>
+<text x="50" y="2128" font-family="Microsoft YaHei, sans-serif" font-size="25" font-weight="400" text-anchor="start" dominant-baseline="central" fill="#56716C">遥控丢失策略：Failsafe 发布故障标志 → RobotControl 置零动力目标并保持转向目标；控制分配继续负责输出分配。</text>
+</svg>

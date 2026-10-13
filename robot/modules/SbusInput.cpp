@@ -44,10 +44,15 @@ SbusInput::SbusInput(const char *devicePath)
       _lastSignalTimestamp(0),
       _publishedFrames(0),
       _readErrors(0),
-      _lossPublished(false)
+      _lossPublished(false),
+      _everConnected(false),
+      _lastLinkWarning(0)
 {
   snprintf(_devicePath, sizeof(_devicePath), "%s",
            devicePath != nullptr ? devicePath : "/dev/ttyS2");
+  _lastMessage.inputSource = InputRc::SOURCE_SBUS;
+  _lastMessage.rssi = -1;
+  _lastMessage.rcLost = true;
 }
 
 /** 释放串口文件描述符。 */
@@ -222,6 +227,8 @@ void SbusInput::run()
 /** 生成 input_rc 消息并通过 uORB 发布。 */
 void SbusInput::publishFrame(const SbusFrame &frame, uint64_t timestamp)
 {
+  const bool announceConnection = !_everConnected ||
+      __atomic_load_n(&_lossPublished, __ATOMIC_ACQUIRE);
   InputRc message;
   message.timestamp = timestamp;
   message.timestampLastSignal = timestamp;
@@ -242,6 +249,12 @@ void SbusInput::publishFrame(const SbusFrame &frame, uint64_t timestamp)
   _lastMessage = message;
   _lastSignalTimestamp = timestamp;
   __atomic_store_n(&_lossPublished, false, __ATOMIC_RELEASE);
+  _everConnected = true;
+  _lastLinkWarning = 0;
+  if (announceConnection)
+    {
+      printf("INFO [sbus_input] MK32 RC connected\n");
+    }
   if (_publication.publish(message))
     {
       __atomic_add_fetch(&_publishedFrames, 1U, __ATOMIC_RELAXED);
@@ -251,19 +264,30 @@ void SbusInput::publishFrame(const SbusFrame &frame, uint64_t timestamp)
 /** 超过 500 ms 没有完整帧时发布一次 rcLost 状态。 */
 void SbusInput::publishLossIfNeeded(uint64_t timestamp)
 {
-  if (__atomic_load_n(&_lossPublished, __ATOMIC_ACQUIRE) ||
-      timestamp - _lastSignalTimestamp <= SignalTimeoutMicroseconds)
+  if (timestamp - _lastSignalTimestamp <= SignalTimeoutMicroseconds)
     {
       return;
     }
 
-  _lastMessage.timestamp = timestamp;
-  _lastMessage.rcLost = true;
-  _lastMessage.frameLost = false;
-  _lastMessage.lostFrameCount = _decoder.receiverLostFrames();
-  _lastMessage.totalFrameCount = _decoder.totalFrames();
-  _publication.publish(_lastMessage);
-  __atomic_store_n(&_lossPublished, true, __ATOMIC_RELEASE);
+  if (!__atomic_load_n(&_lossPublished, __ATOMIC_ACQUIRE))
+    {
+      _lastMessage.timestamp = timestamp;
+      _lastMessage.rcLost = true;
+      _lastMessage.frameLost = false;
+      _lastMessage.lostFrameCount = _decoder.receiverLostFrames();
+      _lastMessage.totalFrameCount = _decoder.totalFrames();
+      _publication.publish(_lastMessage);
+      __atomic_store_n(&_lossPublished, true, __ATOMIC_RELEASE);
+    }
+
+  if (_lastLinkWarning == 0 ||
+      timestamp - _lastLinkWarning >= LinkWarningIntervalMicroseconds)
+    {
+      printf(_everConnected
+                 ? "WARNING [sbus_input] MK32 RC connection lost\n"
+                 : "WARNING [sbus_input] MK32 RC not connected; waiting\n");
+      _lastLinkWarning = timestamp;
+    }
 }
 
 /** 提供NSH的sbus_input命令入口，转交ModuleBase统一处理生命周期。 */

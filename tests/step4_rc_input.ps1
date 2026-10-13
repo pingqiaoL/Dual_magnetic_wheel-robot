@@ -65,6 +65,15 @@ foreach ($command in @('rc_update start', 'sbus_input start -d /dev/ttyS2')) {
     }
 }
 
+$sbusInput = Get-Content -LiteralPath (
+    Join-Path $projectRoot 'robot\modules\SbusInput.cpp') -Raw
+foreach ($notice in @('MK32 RC not connected; waiting',
+        'MK32 RC connected', 'rcLost = true')) {
+    if ($sbusInput -notmatch [regex]::Escape($notice)) {
+        throw "SBUS link reporting is missing: $notice"
+    }
+}
+
 $msysBash = 'C:\msys64\usr\bin\bash.exe'
 if (-not (Test-Path -LiteralPath $msysBash -PathType Leaf)) {
     throw "MSYS2 bash was not found: $msysBash"

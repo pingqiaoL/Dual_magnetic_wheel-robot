@@ -11,7 +11,14 @@
 
 #include "robot/modules/RobotRuntime.hpp"
 
+#include "robot/modules/Command.hpp"
+#include "robot/modules/ControlAllocator.hpp"
+#include "robot/modules/Failsafe.hpp"
+#include "robot/modules/RcUpdate.hpp"
+#include "robot/modules/RobotControl.hpp"
+#include "robot/modules/SbusInput.hpp"
 #include "robot/os/Clock.hpp"
+#include "robot/output/CanOutput.hpp"
 #include "robot/params/ParamSystem.hpp"
 
 #include <stdio.h>
@@ -21,7 +28,9 @@
 RobotRuntime::RobotRuntime()
     : _loopCount(0),
       _initializationComplete(false),
-      _lastInitializationNotice(0)
+      _initializationFailed(false),
+      _lastInitializationNotice(0),
+      _initializationStartedAt(0)
 {
 }
 
@@ -65,6 +74,68 @@ int RobotRuntime::print_usage(const char *reason)
   return reason == nullptr ? 0 : -1;
 }
 
+/** 检查启动链中的每个必需模块，可选择是否输出失败点。 */
+bool RobotRuntime::requiredModulesRunning(bool report)
+{
+  bool ready = true;
+  if (!RcUpdate::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: rc_update is not running\n"); }
+      ready = false;
+    }
+  if (!SbusInput::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: sbus_input is not running\n"); }
+      ready = false;
+    }
+  if (!Failsafe::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: failsafe is not running\n"); }
+      ready = false;
+    }
+  if (!RobotControl::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: robot_control is not running\n"); }
+      ready = false;
+    }
+  if (!ControlAllocator::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: control_allocator is not running\n"); }
+      ready = false;
+    }
+  if (!CanOutput::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: can_output is not running\n"); }
+      ready = false;
+    }
+  if (!Command::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: command is not running\n"); }
+      ready = false;
+    }
+  return ready;
+}
+
+/** 提供手动ready诊断；正常启动不依赖脚本调用该命令。 */
+int RobotRuntime::custom_command(int argc, char *argv[])
+{
+  if (argc != 1 || strcmp(argv[0], "ready") != 0)
+    { return print_usage("unknown command"); }
+
+  RobotRuntime *instance = get_instance();
+  if (instance == nullptr)
+    { return print_usage("robot runtime is not running"); }
+  if (!requiredModulesRunning(true))
+    {
+      instance->markInitializationFailed();
+      fprintf(stderr,
+              "INITIALIZATION ERROR: start missing modules, then run 'robot ready'\n");
+      return -1;
+    }
+  instance->markInitializationComplete();
+  return 0;
+}
+
 /** 打印当前运行状态和循环计数。 */
 int RobotRuntime::print_status()
 {
@@ -72,10 +143,12 @@ int RobotRuntime::print_status()
   printf("loops: %lu\n",
          static_cast<unsigned long>(
              __atomic_load_n(&_loopCount, __ATOMIC_ACQUIRE)));
+  const bool complete = __atomic_load_n(&_initializationComplete,
+                                         __ATOMIC_ACQUIRE);
+  const bool failed = __atomic_load_n(&_initializationFailed,
+                                       __ATOMIC_ACQUIRE);
   printf("initialization: %s\n",
-         __atomic_load_n(&_initializationComplete, __ATOMIC_ACQUIRE)
-             ? "complete"
-             : "in_progress");
+         complete ? "complete" : (failed ? "failed" : "in_progress"));
   printf("parameters: generation %lu, storage %lu, dirty %s\n",
          static_cast<unsigned long>(params().generation()),
          static_cast<unsigned long>(params().storageSequence()),
@@ -89,11 +162,33 @@ void RobotRuntime::run()
   while (!should_exit())
     {
       const uint64_t now = os::Clock::nowMicroseconds();
+      if (_initializationStartedAt == 0) { _initializationStartedAt = now; }
+      const bool complete = __atomic_load_n(&_initializationComplete,
+                                             __ATOMIC_ACQUIRE);
+      if (!complete && requiredModulesRunning(false))
+        {
+          markInitializationComplete();
+        }
+      else if (!complete &&
+               !__atomic_load_n(&_initializationFailed, __ATOMIC_ACQUIRE) &&
+               now - _initializationStartedAt >= InitializationFailureTimeoutUs)
+        {
+          (void)requiredModulesRunning(true);
+          markInitializationFailed();
+        }
+
       if (!__atomic_load_n(&_initializationComplete, __ATOMIC_ACQUIRE) &&
           (_lastInitializationNotice == 0 ||
            now - _lastInitializationNotice >= InitializationNoticeIntervalUs))
         {
-          printf("INITIALIZING [robot] modules are starting; keep SA OFF\n");
+          if (__atomic_load_n(&_initializationFailed, __ATOMIC_ACQUIRE))
+            {
+              printf("INITIALIZATION FAILED [robot] run 'robot ready' to list missing modules\n");
+            }
+          else
+            {
+              printf("INITIALIZING [robot] modules are starting; keep SA OFF\n");
+            }
           _lastInitializationNotice = now;
         }
       __atomic_add_fetch(&_loopCount, 1U, __ATOMIC_RELAXED);
@@ -105,12 +200,20 @@ void RobotRuntime::run()
 /** 停止周期初始化提示，并向NSH公布系统可以接受SA操作。 */
 void RobotRuntime::markInitializationComplete()
 {
+  __atomic_store_n(&_initializationFailed, false, __ATOMIC_RELEASE);
   const bool wasComplete = __atomic_exchange_n(
       &_initializationComplete, true, __ATOMIC_ACQ_REL);
   if (!wasComplete)
     {
       printf("CBoard initialization complete; set SA OFF, then ON to arm\n");
     }
+}
+
+/** 记录启动核验失败；缺失模块恢复后周期检查仍可自动转为完成。 */
+void RobotRuntime::markInitializationFailed()
+{
+  __atomic_store_n(&_initializationComplete, false, __ATOMIC_RELEASE);
+  __atomic_store_n(&_initializationFailed, true, __ATOMIC_RELEASE);
 }
 
 /** 提供NSH的robot命令入口，转交ModuleBase统一处理生命周期。 */

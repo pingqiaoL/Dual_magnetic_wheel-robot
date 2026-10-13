@@ -135,6 +135,56 @@ int CanOutput::print_usage(const char *reason)
   return reason == nullptr ? 0 : -1;
 }
 
+/** 处理CAN驱动专属查询与达妙管理帧命令。 */
+int CanOutput::custom_command(int argc, char *argv[])
+{
+  if (argc == 1 && strcmp(argv[0], "protocols") == 0)
+    { printf("0  disabled\n1  damiao\n"); return 0; }
+
+  // 保留旧别名；真正的手动禁止状态仍由Command所有。
+  if (argc == 1 && (strcmp(argv[0], "enable") == 0 ||
+                    strcmp(argv[0], "disable") == 0))
+    {
+      const bool inhibit = strcmp(argv[0], "disable") == 0;
+      Command::setOutputInhibited(inhibit);
+      printf(inhibit ? "output inhibit active\n"
+                     : "output inhibit cleared; RC safety still required\n");
+      return 0;
+    }
+
+  CanOutput *instance = get_instance();
+  if (instance == nullptr) { return print_usage("can_output is not running"); }
+  if (argc == 1 && strcmp(argv[0], "map") == 0)
+    { instance->printMap(); return 0; }
+  if (argc == 3 && (strcmp(argv[0], "zero") == 0 ||
+                    strcmp(argv[0], "clear") == 0))
+    {
+      if (strcmp(argv[1], "motor") != 0 && strcmp(argv[1], "servo") != 0)
+        { return print_usage("type must be motor or servo"); }
+      const ActuatorType type = strcmp(argv[1], "motor") == 0
+                                  ? ActuatorType::Motor : ActuatorType::Servo;
+      errno = 0;
+      char *end = nullptr;
+      const long index = strtol(argv[2], &end, 0);
+      const uint8_t count = type == ActuatorType::Motor ? MotorCount : ServoCount;
+      if (errno != 0 || end == argv[2] || *end != '\0' ||
+          index < 0 || index >= count)
+        { return print_usage("actuator index is out of range"); }
+      os::LockGuard guard(instance->_outputMutex);
+      if (!guard.locked()) { return -1; }
+      ActuatorArmed safety{};
+      if (!Command::outputInhibited() ||
+          !actuatorArmedTopic().copy(safety) || safety.armed ||
+          !safety.lockdown || instance->_disablePending ||
+          __atomic_load_n(&instance->_protocolArmed, __ATOMIC_ACQUIRE))
+        { return print_usage("disable output and wait for disarm before zero/clear"); }
+      return instance->sendSpecial(type, static_cast<uint8_t>(index),
+                                   strcmp(argv[0], "zero") == 0 ? 0xfe : 0xfb)
+               ? 0 : -1;
+    }
+  return print_usage("unknown command");
+}
+
 /** 打开 NuttX CAN 字符设备并加载参数配置。 */
 bool CanOutput::init()
 {

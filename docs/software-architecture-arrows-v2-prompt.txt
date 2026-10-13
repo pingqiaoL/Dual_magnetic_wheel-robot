@@ -1,0 +1,60 @@
+Use case: infographic-diagram, precise diagram edit.
+Edit target: attached CBoard Chinese software architecture diagram. Optimize this exact diagram's arrow routing, readability, alignment and use of space. Preserve its white background, 3 stacked rounded rectangular swimlanes, pale blue/orange/green/purple/slate module palette, technical English class names and simplified Chinese descriptions. Landscape aspect about 1.9:1, high resolution crisp text. This is an engineering diagram, no decorative illustrations.
+
+Primary defect to fix: routes currently cross and labels obscure arrows, some arrows missing, one safety-switch connection points the wrong direction. Re-layout boxes as needed within the three original tiers to create clean orthogonal connector lanes and no arrows through boxes/text. Use clear solid arrowheads at destination borders, medium consistent line weight, generous gaps and readable labels offset from lines (not over lines). Avoid ambiguous merged junctions. No diagonal arrows. Diagram must look polished like a precise Visio technical architecture slide.
+
+Tier 1 heading: ① 遥控输入、失效检测与控制目标
+Nodes:
+MK32 接收机 / SBUS
+SbusInput / /dev/ttyS2 / 帧解析与失联检测
+RcUpdate / 校准 · 归一化 / 通道功能映射
+Failsafe / 只发布 RC 故障标志
+Command + ArmSafety / SA 上电 OFF 互锁
+RobotControl / 订阅手动输入与故障标志 / 按参数生成速度、转向目标
+Explicit blue data edges:
+MK32 → SbusInput labeled SBUS 100000 8E2.
+SbusInput → RcUpdate labeled input_rc.
+RcUpdate → Failsafe labeled manual_control.
+RcUpdate → RobotControl labeled manual_control.
+RcUpdate → Command + ArmSafety labeled manual_control / manual_control_switches. The switches data originates at RcUpdate and goes to Command; absolutely NO switches arrow back into RcUpdate.
+Red safety edge: Failsafe → RobotControl labeled failsafe_status.
+Red safety edge from Command + ArmSafety down to MixingOutput (tier2) labeled actuator_armed.
+Blue data edge RobotControl down to ControlAllocator in tier2 labeled robot_control_setpoint. Route in dedicated inter-tier gutter, separate from safety line.
+
+Tier2 heading: ② 构型分配、公共输出层与 CAN 驱动
+Nodes:
+ControlAllocator / 选择 CA_AIRFRAME / 检查目标新鲜度
+ActuatorEffectiveness / 双磁轮构型：2 Motor + 2 Servo
+Allocation / a = M × [speed, steering]
+MixingOutput / OutputFunction 路由 / 解锁 · 新鲜度 · 硬故障处理
+CanOutput / 4 个物理槽位 / 协议 · ID · 模式 · 反馈
+DamiaoProtocol / 速度、位置速度帧 / 管理帧与反馈解码
+达妙 CAN 电机 / DM3510 ×2 动力轮 / DM4310 ×2 转向轮
+Arrange main flow left to right, ActuatorEffectiveness above Allocation.
+Blue or green solid data edges ControlAllocator → Allocation labeled speed / steering.
+ActuatorEffectiveness → Allocation labeled 分配矩阵 M (do not label parameter names here).
+Allocation → MixingOutput labeled actuator_motors / actuator_servos, generous two-line label.
+MixingOutput → CanOutput labeled OutputInterface / updateOutputs().
+CanOutput → DamiaoProtocol labeled 编码请求.
+DamiaoProtocol → motors labeled CAN 控制帧 · /dev/can0 (conceptual output path).
+Feedback route motors → CanOutput below main row in a dedicated gutter labeled CAN 反馈 → actuator_status, no overlap with parameter dependency lines.
+Small note within tier 2: CanOutput 持有 MixingOutput，公共处理后通过接口回调驱动。
+Avoid drawing logical parallel chain as inheritance.
+
+Tier3 heading: ③ 启动、参数与公共基础层
+Nodes in a clean row:
+rcS + rc.autostart / 启动各独立任务 / 选择 1_dual_magneticwheel
+RobotRuntime / 模块就绪检查 · 低频提示 / 参数自动保存
+ParamManager / 参数树外的全局参数管理 / 发布 parameter_update
+FlashParamStorage / 双页参数存储 · CRC
+进程内 uORB / Topic · Publication · Subscription
+NuttX 与公共封装 / ModuleBase · os::Task · Mutex / UART · CAN · progmem · pthread
+ParamManager ↔ FlashParamStorage labeled load / save.
+rcS → ParamManager labeled 构型默认参数.
+Use teal DASHED dependency line from ParamManager to a single carefully routed compact shared callout 'parameter_update → 各参数使用模块', not a spaghetti fan-out across tiers. List RcUpdate / RobotControl / ControlAllocator / CanOutput in the callout if space permits. No arrows from ParamManager into a topic-name edge.
+Use short dashed gray dependency callout for uORB: '所有 topic 连线均通过 uORB' rather than long crossing lines to arbitrary nodes.
+NuttX label: '为模块和驱动提供系统服务'. No long unnecessary dependency arrows.
+
+Bottom legend: 蓝色实线：控制 / 数据流；红色实线：安全状态；青色虚线：参数 / 公共依赖.
+Footer note: 当前实现：CAN / 达妙；PWM 为后续扩展。
+Keep compact but spacious, make large title labels and module names sharp. All text clean simplified Chinese/English. Focus on fixing arrow semantics and clean unambiguous routing. Do not add new functional modules.

@@ -18,8 +18,6 @@ public:
   static int task_spawn(int argc, char *argv[]);
   /** 创建不接受启动参数的目标生成对象。 */
   static RobotControl *instantiate(int argc, char *argv[]);
-  /** 返回统一命令路由使用的名称。 */
-  static const char *command_name() { return "robot_control"; }
   /** 输出生命周期命令帮助。 */
   static int print_usage(const char *reason = nullptr);
   /** 输出当前目标和已经应用的安全策略。 */

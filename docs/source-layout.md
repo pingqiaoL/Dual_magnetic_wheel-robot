@@ -6,7 +6,7 @@
 _code/
 ├─ msg/                        # 所有 uORB .msg 源文件
 ├─ robot/                      # 与 NuttX BSP 解耦的 C++ 业务代码
-│  ├─ common/                 # ModuleBase与统一CommandRouter
+│  ├─ common/                 # CRTP ModuleBase生命周期父类
 │  ├─ orb/                    # 轻量发布/订阅总线
 │  ├─ params/                 # 参数定义、校验、Flash 持久化
 │  ├─ configuration/         # RobotConfiguration统计父类
@@ -42,5 +42,5 @@ protocol parsers ──> msg 中的普通数据结构 ──> orb
 - 下位机测厚仪驱动不进入此树；测厚数据由上位机读取。
 - 机器人构型、执行器数量和通道映射放在构型配置中，不散落在驱动代码内。
 
-扩展命令统一实现在`robot/common/CommandRouter.cpp`；解锁管理在`robot/modules/Command.cpp`。
+扩展命令由各模块自己的`custom_command()`处理；解锁管理在`robot/modules/Command.cpp`。
 完整启动顺序、模型增加方式和测试说明见`step6-damiao-motor-framework.md`。

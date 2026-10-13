@@ -17,8 +17,6 @@ public:
   static int task_spawn(int argc, char *argv[]);
   /** 创建模块对象，不接受启动参数。 */
   static Failsafe *instantiate(int argc, char *argv[]);
-  /** 返回统一命令路由使用的名称。 */
-  static const char *command_name() { return "failsafe"; }
   /** 输出命令帮助。 */
   static int print_usage(const char *reason = nullptr);
   /** 输出当前RC丢失状态。 */

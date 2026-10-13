@@ -15,8 +15,8 @@ Step 4 adds the MK32 SBUS receive chain through `rc_update`: USART3 SBUS decodin
 Step 6 provides the numbered `SYS_AUTOSTART` profile and a `CA_AIRFRAME`
 factory for `ActuatorEffectiveness` models. `control_allocator` computes
 parameterized motor/steering targets. `command` owns the RC safety interlock
-and publishes `actuator_armed`; all module extension commands are dispatched
-by `CommandRouter`. `CanOutput` owns `MixingOutput`, which checks safety and
+and publishes `actuator_armed`; each module implements its own extension
+commands through `custom_command()`. `CanOutput` owns `MixingOutput`, which checks safety and
 freshness and calls the driver's virtual `updateOutputs` method. Damiao CAN
 uses the NuttX `/dev/can0` character driver. After one valid switch OFF
 observation, switch ON arms automatically. An explicit enable command is

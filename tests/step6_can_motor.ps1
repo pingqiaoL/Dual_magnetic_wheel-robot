@@ -10,10 +10,10 @@ New-Item -ItemType Directory -Force -Path $testDirectory | Out-Null
 
 $rcS = Get-Content -LiteralPath (
     Join-Path $projectRoot 'startup\etc\init.d\rcS') -Raw
-foreach ($command in @('source /etc/init.d/rc.autostart',
+foreach ($command in @('set +e', 'source /etc/init.d/rc.autostart',
         'failsafe start', 'robot_control start', 'control_allocator start',
         'can_output start -d /dev/can0',
-        'command start', 'robot ready')) {
+        'command start')) {
     if ($rcS -notmatch [regex]::Escape($command)) {
         throw "rcS is missing command: $command"
     }
@@ -30,6 +30,26 @@ $profile = Get-Content -LiteralPath (
     Join-Path $projectRoot 'startup\etc\robots\1_dual_magneticwheel') -Raw
 if ($profile -notmatch 'param set CA_AIRFRAME 1') {
     throw 'Numbered profile must select its actuator model.'
+}
+$runtime = Get-Content -LiteralPath (
+    Join-Path $projectRoot 'robot\modules\RobotRuntime.cpp') -Raw
+foreach ($module in @('RcUpdate', 'SbusInput', 'Failsafe', 'RobotControl',
+        'ControlAllocator', 'CanOutput', 'Command')) {
+    if ($runtime -notmatch [regex]::Escape("$module::is_running()")) {
+        throw "robot ready does not verify module: $module"
+    }
+}
+if ($runtime -notmatch 'requiredModulesRunning\(false\)' -or
+    $runtime -notmatch 'markInitializationComplete') {
+    throw 'RobotRuntime does not complete initialization automatically.'
+}
+if ($runtime -notmatch 'markInitializationFailed') {
+    throw 'robot ready does not record a failed startup check.'
+}
+$moduleBase = Get-Content -LiteralPath (
+    Join-Path $projectRoot 'robot\common\ModuleBase.hpp') -Raw
+if ($moduleBase -notmatch 'T::custom_command') {
+    throw 'ModuleBase does not dispatch extension commands to each module.'
 }
 foreach ($default in @('CAN_M0_FUNC 101', 'CAN_M1_FUNC 102',
         'CAN_S0_FUNC 201', 'CAN_S1_FUNC 202', 'FS_MOT_ACT 1',

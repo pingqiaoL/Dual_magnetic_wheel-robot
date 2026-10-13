@@ -41,9 +41,9 @@ public:
 
   static int task_spawn(int argc, char *argv[]);
   static CanOutput *instantiate(int argc, char *argv[]);
-  /** 返回统一命令路由使用的固定模块名称。 */
-  static const char *command_name() { return "can_output"; }
   static int print_usage(const char *reason = nullptr);
+  /** 处理协议、映射、手动禁止、设零和清错命令。 */
+  static int custom_command(int argc, char *argv[]);
 
   bool init() override;
   bool updateOutputs(bool stopOutputs, const float *outputs, uint8_t count,
@@ -56,8 +56,6 @@ protected:
   bool updateParamsImpl() override { return refreshParameters(); }
 
 private:
-  /** 唯一扩展命令路由可以访问受保护的模块实例。 */
-  friend class CommandRouter;
   /** 协议编码前再次保护归一化数值范围。 */
   static float constrainUnit(float value);
   /** 将协议枚举转换为NSH显示名称。 */

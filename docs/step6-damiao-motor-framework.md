@@ -24,8 +24,7 @@ ControlAllocator不再判断SA位置或生成解锁状态。电机、舵机消�
 
 | 文件 | 职责 |
 | --- | --- |
-| robot/common/ModuleBase.hpp | CRTP创建对象、启动、停止、状态和生命周期锁 |
-| robot/common/CommandRouter.hpp/.cpp | 所有扩展命令的唯一分发位置 |
+| robot/common/ModuleBase.hpp | CRTP生命周期管理并调用子类custom_command |
 | robot/modules/Command.hpp/.cpp | 遥控安全互锁、手动禁止及解锁状态发布 |
 | robot/configuration/RobotConfiguration.hpp | 构型名称、两类执行器数量和可逆电机统计接口 |
 | robot/control/ActuatorEffectiveness.hpp | 继承构型接口，增加参数化矩阵生成接口 |
@@ -42,24 +41,24 @@ ControlAllocator不再判断SA位置或生成解锁状态。电机、舵机消�
 新增代码不使用namespace块，原CanOutput匿名namespace中的函数已改为private静态成员。
 现有OS与uORB库仍沿用其os::、uorb::接口。
 
-## command与扩展命令
+## 各模块扩展命令
 
-ModuleBase保留start、stop、status，并在持有目标生命周期锁时调用CommandRouter。
-各业务模块不再实现custom_command。CommandRouter独立的小头文件用于避免模板父类与
-具体业务模块互相包含；所有扩展命令的实现都集中在其.cpp中。
+ModuleBase保留start、stop、status，并在持有目标生命周期锁时调用具体模块的
+`custom_command()`。`RobotRuntime`处理ready，`Command`处理enable/disable，
+`CanOutput`处理协议、映射、设零和清错。
 
 ```sh
 command status
-command can_output protocols
-command can_output map
-command control_allocator status
-command param get CA_YAW_R
+can_output protocols
+can_output map
+control_allocator status
+param get CA_YAW_R
 command disable
 command enable
 ```
 
-原来的`can_output protocols/map/enable/disable/zero/clear`和`robot ready`仍然可用，
-它们也经过同一个路由。enable只解除手动禁止，不能跳过遥控互锁。
+`can_output protocols/map/enable/disable/zero/clear`和`robot ready`仍然可用，
+但分别由对应模块处理。enable只解除手动禁止，不能跳过遥控互锁。
 can_output enable/disable现在是全局输出禁止的兼容入口。param继续保留独立入口。
 
 ## 安全开关
@@ -118,11 +117,13 @@ rcS
   control_allocator start             # 工厂按CA_AIRFRAME创建模型
   can_output start -d /dev/can0
   command start                       # 前面的模块就绪后才接收解锁操作
-  robot ready
+  RobotRuntime周期检查                # 全部运行后自动打印完成标志
 ```
 
 SYS_AUTOSTART=1是启动配置编号，CA_AIRFRAME=1是模型编号。编号可不同，目前都使用1。
-不支持的启动配置或失败的模块启动会中止rcS，未启动的command不会发布解锁。
+启动脚本会继续尝试后续模块，RobotRuntime自动检查每个必需模块；全部运行后打印
+`CBoard initialization complete`，超时则逐项打印缺失模块。`robot ready`保留为手动诊断命令。
+未启动的command不会发布解锁。
 配置文件使用set-default保留用户已有修改；CA_AIRFRAME由选中的脚本明确设置。
 
 ```sh
@@ -164,7 +165,7 @@ robot status
 command status
 control_allocator status
 can_output status
-command can_output map
+can_output map
 ```
 
 上电SA保持OFF，等初始化完成提示后拨ON；检查四台电机反馈及后转向中位。
