@@ -5,7 +5,8 @@
 
 #pragma once
 
-#include "robot/common/ModuleBase.hpp"
+#include "robot/common/WorkQueueModuleBase.hpp"
+#include "robot/orb/SubscriptionCallback.hpp"
 #include "robot/modules/RcConfig.hpp"
 #include "robot/orb/Topics.hpp"
 #include "robot/params/ModuleParams.hpp"
@@ -16,14 +17,12 @@
  * @class RcUpdate
  * @brief 订阅 input_rc，输出 rc_channels、manual_control_input 和开关状态。
  */
-class RcUpdate final : public ModuleBase<RcUpdate>, public ModuleParams
+class RcUpdate final : public WorkQueueModuleBase<RcUpdate>, public ModuleParams
 {
 public:
   /** 绑定遥控链路所需的订阅器和发布器。 */
   RcUpdate();
 
-  /** 创建 rc_update 独立线程。 */
-  static int task_spawn(int argc, char *argv[]);
 
   /** 创建 RcUpdate 对象。 */
   static RcUpdate *instantiate(int argc, char *argv[]);
@@ -34,8 +33,13 @@ public:
   /** 打印处理统计、归一化摇杆、开关位置和信号状态。 */
   int print_status() override;
 
-  /** 周期检查 input_rc 更新并执行校准与映射。 */
-  void run() override;
+  /** 消息回调或10ms兜底触发一次校准与映射。 */
+  void Run() override;
+
+protected:
+  bool initWorkQueue() override;
+  void unregisterCallbacks() override;
+  void onWorkQueueStopped() override;
 
 private:
   /** 校准一帧输入并发布全部上层遥控 topic。 */
@@ -50,9 +54,10 @@ private:
 
   static constexpr uint64_t InputTimeoutMicroseconds = 500000;
 
+  os::Mutex _stateMutex;
   RcConfig _config;
-  uorb::Subscription<InputRc> _inputSubscription;
-  uorb::Subscription<ParameterUpdate> _parameterSubscription;
+  uorb::SubscriptionCallbackWorkItem<InputRc> _inputSubscription;
+  uorb::SubscriptionCallbackWorkItem<ParameterUpdate> _parameterSubscription;
   uorb::Publication<RcChannels> _channelsPublication;
   uorb::Publication<ManualControl> _manualPublication;
   uorb::Publication<ManualControlSwitches> _switchesPublication;

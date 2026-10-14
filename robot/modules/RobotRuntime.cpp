@@ -20,6 +20,7 @@
 #include "robot/os/Clock.hpp"
 #include "robot/output/CanOutput.hpp"
 #include "robot/params/ParamSystem.hpp"
+#include "robot/work_queue/WorkQueueManager.hpp"
 
 #include <stdio.h>
 #include <string.h>
@@ -59,6 +60,8 @@ RobotRuntime *RobotRuntime::instantiate(int argc, char *argv[])
       fprintf(stderr, "parameter system initialization failed\n");
       return nullptr;
     }
+  if (!robot_wq::Initialize())
+    { fprintf(stderr, "work queue initialization failed\n"); return nullptr; }
   return new RobotRuntime();
 }
 
@@ -149,6 +152,7 @@ int RobotRuntime::print_status()
                                        __ATOMIC_ACQUIRE);
   printf("initialization: %s\n",
          complete ? "complete" : (failed ? "failed" : "in_progress"));
+  robot_wq::PrintStatus();
   printf("parameters: generation %lu, storage %lu, dirty %s\n",
          static_cast<unsigned long>(params().generation()),
          static_cast<unsigned long>(params().storageSequence()),
@@ -192,6 +196,7 @@ void RobotRuntime::run()
           _lastInitializationNotice = now;
         }
       __atomic_add_fetch(&_loopCount, 1U, __ATOMIC_RELAXED);
+      Command::reportWarnings();
       params().pollAutoSave(now);
       os::Clock::sleepMilliseconds(100);
     }

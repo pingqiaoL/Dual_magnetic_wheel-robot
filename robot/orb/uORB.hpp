@@ -2,7 +2,7 @@
  * @file uORB.hpp
  * @brief 提供适合当前单片机工程的轻量发布、订阅和最新值缓存机制。
  *
- * 当前实现不使用任务队列，也不在中断中调用。每个 Topic 保存最新一份
+ * 当前实现支持工作项通知，不在中断中调用。每个 Topic 保存最新一份
  * 消息和递增的 generation；Publication 发布消息，Subscription 只在发现
  * generation 变化时取出新消息，从而让驱动和业务模块不直接互相调用。
  */
@@ -15,6 +15,13 @@
 
 namespace uorb
 {
+/** Must only request scheduling; no topic reads or module computation here. */
+class Callback
+{
+public:
+  virtual ~Callback() = default;
+  virtual void onTopicUpdate() = 0;
+};
 
 /**
  * @class Topic
@@ -38,16 +45,37 @@ public:
   /** 发布一份消息，并增加 generation 通知所有订阅者。 */
   bool publish(const Message &message)
   {
-    os::LockGuard guard(_mutex);
-    if (!guard.locked())
       {
-        return false;
+        os::LockGuard guard(_mutex);
+        if (!guard.locked()) { return false; }
+        _message = message;
+        ++_generation;
+        _advertised = true;
       }
-
-    _message = message;
-    ++_generation;
-    _advertised = true;
+    // Separate callback lock: data lock is already released. Unregister waits
+    // for these short notifications, so callback objects cannot be freed early.
+    os::LockGuard callbacks(_callbackMutex);
+    if (!callbacks.locked()) { return false; }
+    for (Callback *callback : _callbacks)
+      { if (callback != nullptr) { callback->onTopicUpdate(); } }
     return true;
+  }
+
+  bool registerCallback(Callback &callback)
+  {
+    os::LockGuard guard(_callbackMutex);
+    if (!guard.locked()) { return false; }
+    for (Callback *entry : _callbacks) { if (entry == &callback) { return true; } }
+    for (Callback *&entry : _callbacks)
+      { if (entry == nullptr) { entry = &callback; return true; } }
+    return false;
+  }
+
+  void unregisterCallback(Callback &callback)
+  {
+    os::LockGuard guard(_callbackMutex);
+    if (!guard.locked()) { return; }
+    for (Callback *&entry : _callbacks) { if (entry == &callback) { entry = nullptr; } }
   }
 
   /** 当存在新 generation 时复制消息，并更新订阅者自己的 generation。 */
@@ -79,6 +107,8 @@ public:
   }
 
 private:
+  os::Mutex _callbackMutex;
+  Callback *_callbacks[8]{};
   /** 保护消息、generation 和 advertised 状态。 */
   os::Mutex _mutex;
 

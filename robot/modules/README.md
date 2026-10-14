@@ -11,3 +11,8 @@
 
 RC丢失不会直接失能执行器；`RobotControl` 持续产生安全目标。未解锁、lockdown
 或输出链硬故障由 `MixingOutput` 在物理驱动前处理。
+
+2026-10-13：RcUpdate、Command运行于wq_safety（110）；Failsafe、RobotControl、
+ControlAllocator运行于wq_control（105）。这些模块的Run()只执行一次，不休眠。
+消息通知与10/20ms兜底合并，并按同一间隔限制最高执行频率。SbusInput、
+CanOutput、RobotRuntime仍是独立任务。详见docs/10.13修改文档.md。

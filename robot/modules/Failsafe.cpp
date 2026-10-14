@@ -11,8 +11,9 @@
 
 /** 建立手动输入订阅和Failsafe状态发布。 */
 Failsafe::Failsafe()
-  : ModuleParams(nullptr), _manualSubscription(manualControlTopic()),
-    _parameterSubscription(parameterUpdateTopic()),
+  : WorkQueueModuleBase<Failsafe>(robot_wq::ControlQueue(), 20000),
+    ModuleParams(nullptr), _manualSubscription(manualControlTopic(), *this),
+    _parameterSubscription(parameterUpdateTopic(), *this),
     _statusPublication(failsafeStatusTopic()),
     _paramRcTimeout(this, "FS_RC_TMO", 0.5f)
 {
@@ -20,14 +21,7 @@ Failsafe::Failsafe()
   (void)refreshPolicy();
 }
 
-/** 创建独立Failsafe任务并等待对象就绪。 */
-int Failsafe::task_spawn(int argc, char *argv[])
-{
-  const int id = os::Task::spawn("failsafe", 105, 4096,
-                                &run_trampoline, argc, argv);
-  __atomic_store_n(&_taskId, id < 0 ? -1 : id, __ATOMIC_RELEASE);
-  return id < 0 ? -1 : wait_until_running();
-}
+
 
 /** 创建Failsafe对象。 */
 Failsafe *Failsafe::instantiate(int argc, char *argv[])
@@ -84,22 +78,39 @@ void Failsafe::update(uint64_t now)
 /** 持锁输出最近一次故障检测状态。 */
 int Failsafe::print_status()
 {
-  os::LockGuard guard(_stateMutex);
-  if (!guard.locked()) { return -1; }
+  bool active;
+  uint64_t timeout;
+  {
+    os::LockGuard guard(_stateMutex);
+    if (!guard.locked()) { return -1; }
+    active = _status.active;
+    timeout = _timeoutUs;
+  }
   printf("running\nRC lost: %s\ntimeout: %.3f s\n",
-         _status.active ? "yes" : "no",
-         static_cast<double>(_timeoutUs) / 1000000.0);
+         active ? "yes" : "no", static_cast<double>(timeout) / 1000000.0);
   return 0;
 }
 
 /** 周期发布故障标志；停止后发布active使目标生成器立即进入安全状态。 */
-void Failsafe::run()
+bool Failsafe::initWorkQueue()
 {
-  while (!should_exit())
-    {
-      update();
-      os::Clock::sleepMilliseconds(20);
-    }
+  return _manualSubscription.registerCallback() &&
+         _parameterSubscription.registerCallback();
+}
+
+void Failsafe::unregisterCallbacks()
+{
+  _manualSubscription.unregisterCallback();
+  _parameterSubscription.unregisterCallback();
+}
+
+void Failsafe::Run()
+{
+  update();
+}
+
+void Failsafe::onWorkQueueStopped()
+{
   FailsafeStatus stopped{};
   stopped.timestamp = os::Clock::nowMicroseconds();
   stopped.active = true;

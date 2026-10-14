@@ -17,9 +17,10 @@
 
 /** 初始化 uORB 端点和 RC 链路状态。 */
 RcUpdate::RcUpdate()
-    : ModuleParams(nullptr), _config(this),
-      _inputSubscription(inputRcTopic()),
-      _parameterSubscription(parameterUpdateTopic()),
+    : WorkQueueModuleBase<RcUpdate>(robot_wq::SafetyQueue(), 10000),
+    ModuleParams(nullptr), _config(this),
+      _inputSubscription(inputRcTopic(), *this),
+      _parameterSubscription(parameterUpdateTopic(), *this),
       _channelsPublication(rcChannelsTopic()),
       _manualPublication(manualControlTopic()),
       _switchesPublication(manualControlSwitchesTopic()),
@@ -32,20 +33,7 @@ RcUpdate::RcUpdate()
 {
 }
 
-/** 标记模块正在启动并创建 rc_update 线程。 */
-int RcUpdate::task_spawn(int argc, char *argv[])
-{
-  const int taskId = os::Task::spawn("rc_update", 110, 4096,
-                                     &run_trampoline, argc, argv);
-  if (taskId < 0)
-    {
-      __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
-      return -1;
-    }
 
-  __atomic_store_n(&_taskId, taskId, __ATOMIC_RELEASE);
-  return wait_until_running();
-}
 
 /** 创建不依赖硬件文件描述符的 rc_update 对象。 */
 RcUpdate *RcUpdate::instantiate(int argc, char *argv[])
@@ -74,7 +62,13 @@ int RcUpdate::print_status()
   printf("processed frames: %lu\n",
          static_cast<unsigned long>(
              __atomic_load_n(&_processedFrames, __ATOMIC_ACQUIRE)));
-  printf("calibration: %s\n", _config.valid() ? "valid" : "invalid");
+  bool calibrationValid;
+  {
+    os::LockGuard guard(_stateMutex);
+    if (!guard.locked()) { return -1; }
+    calibrationValid = _config.valid();
+  }
+  printf("calibration: %s\n", calibrationValid ? "valid" : "invalid");
   printf("signal lost: %s\n",
          __atomic_load_n(&_signalLost, __ATOMIC_ACQUIRE) ? "yes" : "no");
 
@@ -107,32 +101,45 @@ int RcUpdate::print_status()
   return 0;
 }
 
-/** 以 100 Hz 轮询轻量 uORB，不需要 PX4 任务队列。 */
-void RcUpdate::run()
+/** 注册消息触发；无输入时仍由定时兜底检查超时。 */
+bool RcUpdate::initWorkQueue()
 {
   _lastInputTimestamp = os::Clock::nowMicroseconds();
+  return _inputSubscription.registerCallback() &&
+         _parameterSubscription.registerCallback();
+}
 
-  while (!should_exit())
-    {
-      const uint64_t now = os::Clock::nowMicroseconds();
-      ParameterUpdate parameterUpdate;
-      if (_parameterSubscription.update(parameterUpdate))
-        {
-          (void)updateParams();
-        }
+void RcUpdate::unregisterCallbacks()
+{
+  _inputSubscription.unregisterCallback();
+  _parameterSubscription.unregisterCallback();
+}
 
-      InputRc input;
-      if (_inputSubscription.update(input))
-        {
-          processInput(input, now);
-        }
-      else
-        {
-          publishTimeoutIfNeeded(now);
-        }
+void RcUpdate::Run()
+{
+  os::LockGuard guard(_stateMutex);
+  if (!guard.locked()) { return; }
+  const uint64_t now = os::Clock::nowMicroseconds();
+  ParameterUpdate parameterUpdate{};
+  if (_parameterSubscription.update(parameterUpdate)) { (void)updateParams(); }
+  InputRc input{};
+  if (_inputSubscription.update(input)) { processInput(input, now); }
+  else { publishTimeoutIfNeeded(now); }
+}
 
-      os::Clock::sleepMilliseconds(10);
-    }
+void RcUpdate::onWorkQueueStopped()
+{
+  RcChannels channels{};
+  channels.timestamp = os::Clock::nowMicroseconds();
+  channels.signalLost = true;
+  for (uint8_t i = 0; i < RcChannels::FUNCTION_COUNT; ++i) { channels.function[i] = -1; }
+  (void)_channelsPublication.publish(channels);
+  ManualControl manual{};
+  manual.timestamp = channels.timestamp;
+  (void)_manualPublication.publish(manual);
+  ManualControlSwitches switches{};
+  switches.timestamp = channels.timestamp;
+  (void)_switchesPublication.publish(switches);
 }
 
 /** 应用 MIN/TRIM/MAX/DEADZONE/REV，并生成通道、摇杆和开关消息。 */

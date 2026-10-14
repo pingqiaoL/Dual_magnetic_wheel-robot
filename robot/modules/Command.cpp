@@ -12,12 +12,14 @@
 
 /** 所有输出共享的NSH禁止标志；修改及读取均使用原子操作。 */
 bool Command::_outputInhibited = false;
+int32_t Command::_warningSwitch = 0;
 
 /** 建立订阅并读取兼容的CA_ARM_SW参数。 */
 Command::Command()
-  : ModuleParams(nullptr), _manualSubscription(manualControlTopic()),
-    _switchSubscription(manualControlSwitchesTopic()),
-    _parameterSubscription(parameterUpdateTopic()),
+  : WorkQueueModuleBase<Command>(robot_wq::SafetyQueue(), 20000),
+    ModuleParams(nullptr), _manualSubscription(manualControlTopic(), *this),
+    _switchSubscription(manualControlSwitchesTopic(), *this),
+    _parameterSubscription(parameterUpdateTopic(), *this),
     _armedPublication(actuatorArmedTopic()),
     _paramArmSwitch(this, "CA_ARM_SW", 1)
 {
@@ -25,14 +27,7 @@ Command::Command()
   updateParameters();
 }
 
-/** 创建任务并等待对象就绪。 */
-int Command::task_spawn(int argc, char *argv[])
-{
-  const int id = os::Task::spawn("command", 110, 4096,
-                               &run_trampoline, argc, argv);
-  __atomic_store_n(&_taskId, id < 0 ? -1 : id, __ATOMIC_RELEASE);
-  return id < 0 ? -1 : wait_until_running();
-}
+
 
 /** 创建独立安全管理对象。 */
 Command *Command::instantiate(int argc, char *argv[])
@@ -78,13 +73,23 @@ bool Command::outputInhibited()
 /** 持状态锁打印安全检查、开关位置和解锁状态。 */
 int Command::print_status()
 {
-  os::LockGuard guard(_stateMutex);
-  if (!guard.locked()) { return -1; }
+  int32_t armSwitch;
+  uint8_t position;
+  ActuatorArmed status{};
+  const char *stateName;
+  {
+    os::LockGuard guard(_stateMutex);
+    if (!guard.locked()) { return -1; }
+    armSwitch = _armSwitch;
+    position = _position;
+    status = _status;
+    stateName = _armSafety.stateName();
+  }
   printf("running\narm switch: %ld\narm switch position: %u\n",
-         static_cast<long>(_armSwitch), _position);
+         static_cast<long>(armSwitch), position);
   printf("arm safety: %s\narmed: %s\nRC valid: %s\nlockdown: %s\n",
-         _armSafety.stateName(), _status.armed ? "yes" : "no",
-         _status.valid ? "yes" : "no", outputInhibited() ? "yes" : "no");
+         stateName, status.armed ? "yes" : "no",
+         status.valid ? "yes" : "no", outputInhibited() ? "yes" : "no");
   return 0;
 }
 
@@ -134,8 +139,7 @@ void Command::updateSafety(uint64_t now)
       _position != ManualControlSwitches::POSITION_OFF &&
       (_lastWarning == 0 || now - _lastWarning >= 5000000ULL))
     {
-      printf("WARNING [command] switch %ld is not OFF; set OFF before arming\n",
-             static_cast<long>(_armSwitch));
+      __atomic_store_n(&_warningSwitch, _armSwitch, __ATOMIC_RELEASE);
       _lastWarning = now;
     }
   (void)_armedPublication.publish(_status);
@@ -161,16 +165,39 @@ void Command::update(uint64_t now)
 }
 
 /** 50Hz刷新安全心跳；停任务后输出层会立即收到失锁消息。 */
-void Command::run()
+bool Command::initWorkQueue()
 {
-  while (!should_exit())
-    {
-      update();
-      os::Clock::sleepMilliseconds(20);
-    }
+  return _manualSubscription.registerCallback() &&
+         _switchSubscription.registerCallback() &&
+         _parameterSubscription.registerCallback();
+}
+
+void Command::unregisterCallbacks()
+{
+  _manualSubscription.unregisterCallback();
+  _switchSubscription.unregisterCallback();
+  _parameterSubscription.unregisterCallback();
+}
+
+void Command::Run()
+{
+  update();
+}
+
+void Command::onWorkQueueStopped()
+{
   ActuatorArmed stopped{};
   stopped.timestamp = os::Clock::nowMicroseconds();
   (void)_armedPublication.publish(stopped);
+}
+
+// Called by RobotRuntime, never by the shared worker.
+void Command::reportWarnings()
+{
+  const int32_t armSwitch = __atomic_exchange_n(&_warningSwitch, 0, __ATOMIC_ACQ_REL);
+  if (armSwitch != 0)
+    { printf("WARNING [command] switch %ld is not OFF; set OFF before arming\n",
+             static_cast<long>(armSwitch)); }
 }
 
 /** NSH入口交给ModuleBase管理生命周期并回调本类扩展命令。 */

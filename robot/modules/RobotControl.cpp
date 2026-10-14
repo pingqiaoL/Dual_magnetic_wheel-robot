@@ -15,9 +15,10 @@ static constexpr uint64_t FailsafeStatusTimeoutUs = 500000ULL;
 
 /** 建立输入订阅、目标发布和安全策略参数。 */
 RobotControl::RobotControl()
-  : ModuleParams(nullptr), _manualSubscription(manualControlTopic()),
-    _failsafeSubscription(failsafeStatusTopic()),
-    _parameterSubscription(parameterUpdateTopic()),
+  : WorkQueueModuleBase<RobotControl>(robot_wq::ControlQueue(), 20000),
+    ModuleParams(nullptr), _manualSubscription(manualControlTopic(), *this),
+    _failsafeSubscription(failsafeStatusTopic(), *this),
+    _parameterSubscription(parameterUpdateTopic(), *this),
     _setpointPublication(robotControlSetpointTopic()),
     _paramMotorAction(this, "FS_MOT_ACT", 1),
     _paramMotorValue(this, "FS_MOT_VAL", 0.0f),
@@ -29,14 +30,7 @@ RobotControl::RobotControl()
   (void)refreshPolicy();
 }
 
-/** 创建独立目标生成任务并等待对象就绪。 */
-int RobotControl::task_spawn(int argc, char *argv[])
-{
-  const int id = os::Task::spawn("robot_control", 105, 4096,
-                                &run_trampoline, argc, argv);
-  __atomic_store_n(&_taskId, id < 0 ? -1 : id, __ATOMIC_RELEASE);
-  return id < 0 ? -1 : wait_until_running();
-}
+
 
 /** 创建目标生成对象。 */
 RobotControl *RobotControl::instantiate(int argc, char *argv[])
@@ -142,28 +136,47 @@ void RobotControl::update(uint64_t now)
 /** 持锁输出目标、Failsafe状态及当前策略。 */
 int RobotControl::print_status()
 {
-  os::LockGuard guard(_stateMutex);
-  if (!guard.locked()) { return -1; }
+  RobotControlSetpoint setpoint{};
+  int32_t motorAction;
+  int32_t steeringAction;
+  {
+    os::LockGuard guard(_stateMutex);
+    if (!guard.locked()) { return -1; }
+    setpoint = _setpoint;
+    motorAction = _paramMotorAction.get();
+    steeringAction = _paramSteeringAction.get();
+  }
   printf("running\nfailsafe active: %s\nsetpoint valid: %s\n",
-         _setpoint.failsafe ? "yes" : "no",
-         _setpoint.valid ? "yes" : "no");
-  printf("speed/steering: %.3f %.3f\n",
-         static_cast<double>(_setpoint.speed),
-         static_cast<double>(_setpoint.steering));
+         setpoint.failsafe ? "yes" : "no", setpoint.valid ? "yes" : "no");
+  printf("speed/steering: %.3f %.3f\n", static_cast<double>(setpoint.speed),
+         static_cast<double>(setpoint.steering));
   printf("motor action: %ld, steering action: %ld\n",
-         static_cast<long>(_paramMotorAction.get()),
-         static_cast<long>(_paramSteeringAction.get()));
+         static_cast<long>(motorAction), static_cast<long>(steeringAction));
   return 0;
 }
 
 /** 周期发布目标；停止后立即发布无效的安全目标。 */
-void RobotControl::run()
+bool RobotControl::initWorkQueue()
 {
-  while (!should_exit())
-    {
-      update();
-      os::Clock::sleepMilliseconds(20);
-    }
+  return _manualSubscription.registerCallback() &&
+         _failsafeSubscription.registerCallback() &&
+         _parameterSubscription.registerCallback();
+}
+
+void RobotControl::unregisterCallbacks()
+{
+  _manualSubscription.unregisterCallback();
+  _failsafeSubscription.unregisterCallback();
+  _parameterSubscription.unregisterCallback();
+}
+
+void RobotControl::Run()
+{
+  update();
+}
+
+void RobotControl::onWorkQueueStopped()
+{
   RobotControlSetpoint stopped{};
   stopped.timestamp = os::Clock::nowMicroseconds();
   stopped.failsafe = true;

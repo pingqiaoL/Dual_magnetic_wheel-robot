@@ -564,7 +564,7 @@ bool CanOutput::sendSpecialAll(uint8_t command)
         { success = sendSpecial(ActuatorType::Motor, index, command) && success; }
       // NuttX CAN 设备以非阻塞方式打开。管理帧之间留出队列排空时间，
       // 防止连续四帧时排在最后的后转向电机收不到使能命令。
-      os::Clock::sleepMilliseconds(2);
+      os::Clock::sleepMilliseconds(2); //挂起调度任务，mcu给其他就绪任务，到期后转变为就绪态
     }
   for (uint8_t index = 0; index < ServoCount; ++index)
     {

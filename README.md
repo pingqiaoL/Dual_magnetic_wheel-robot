@@ -25,6 +25,14 @@ only needed to clear a manual output inhibit.
 See [the actuator framework guide](docs/step6-damiao-motor-framework.md)
 for file roles, startup order, NSH commands and adding a new model.
 
+## Work queue scheduling (2026-10-13)
+
+`RcUpdate` and `Command` share `wq_safety` (110). `Failsafe`, `RobotControl`
+and `ControlAllocator` share `wq_control` (105). Message callbacks request a
+single `Run()`; periodic fallback maintains loss detection and heartbeats.
+SBUS, CAN and runtime/Flash autosave remain independent tasks.
+See [the change log](docs/10.13修改文档.md). `robot status` includes queue stats.
+
 ## Quick start
 
 On Windows PowerShell:
@@ -39,6 +47,7 @@ On Windows PowerShell:
 .\tests\step4_rc_input.ps1
 .\tests\step5_params.ps1
 .\tests\step6_can_motor.ps1
+.\tests\step7_work_queue.ps1
 .\tools\build.ps1 -Clean -Jobs 4
 ```
 

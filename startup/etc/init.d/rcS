@@ -2,7 +2,7 @@
 # Continue so RobotRuntime can report every failed module.
 set +e
 
-echo "Starting CBoard robot runtime"
+echo "Starting runtime and control work queues"
 robot start
 
 echo "Selecting numbered robot profile"

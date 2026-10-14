@@ -2,14 +2,15 @@
  * @brief 按CA_AIRFRAME创建构型模型，使用通用算法发布执行器输出。
  */
 #pragma once
-#include "robot/common/ModuleBase.hpp"
+#include "robot/common/WorkQueueModuleBase.hpp"
+#include "robot/orb/SubscriptionCallback.hpp"
 #include "robot/control/Allocation.hpp"
 #include "robot/orb/Topics.hpp"
 #include "robot/params/ModuleParams.hpp"
 #include "robot/params/Param.hpp"
 
 /** 只负责参数化控制分配，不判断SA开关或发送CAN使能命令。 */
-class ControlAllocator final : public ModuleBase<ControlAllocator>,
+class ControlAllocator final : public WorkQueueModuleBase<ControlAllocator>,
                                public ModuleParams
 {
 public:
@@ -17,16 +18,19 @@ public:
   ControlAllocator(int32_t modelId, ActuatorEffectiveness *effectiveness);
   /** 释放拥有的构型对象。 */
   ~ControlAllocator() override;
-  /** 创建105优先级的控制分配任务。 */
-  static int task_spawn(int argc, char *argv[]);
   /** 从CA_AIRFRAME创建模型，兼容旧的-c climbot选项。 */
   static ControlAllocator *instantiate(int argc, char *argv[]);
   /** 显示帮助。 */
   static int print_usage(const char *reason = nullptr);
   /** 显示当前构型和分配状态。 */
   int print_status() override;
-  /** 50Hz将上层目标按构型矩阵分配给执行器。 */
-  void run() override;
+  /** 单次将上层目标按构型矩阵分配给执行器。 */
+  void Run() override;
+
+protected:
+  bool initWorkQueue() override;
+  void unregisterCallbacks() override;
+  void onWorkQueueStopped() override;
 
 private:
   /** 模型选择的唯一创建位置，新增机型时增加一个分支。 */
@@ -37,8 +41,8 @@ private:
   ParamInt _paramAirframe;
   ActuatorEffectiveness *_effectiveness;
   Allocation _allocation;
-  uorb::Subscription<RobotControlSetpoint> _setpointSubscription;
-  uorb::Subscription<ParameterUpdate> _parameterSubscription;
+  uorb::SubscriptionCallbackWorkItem<RobotControlSetpoint> _setpointSubscription;
+  uorb::SubscriptionCallbackWorkItem<ParameterUpdate> _parameterSubscription;
   uorb::Publication<ActuatorMotors> _motorsPublication;
   uorb::Publication<ActuatorServos> _servosPublication;
   /** 保护运行线程与NSH状态读取之间的矩阵状态及计数。 */

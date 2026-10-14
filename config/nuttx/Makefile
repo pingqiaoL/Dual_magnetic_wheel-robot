@@ -22,11 +22,13 @@ CXXSRCS += FlashParamStorage.cpp ParamSystem.cpp
 CXXSRCS += MixingOutput.cpp Allocation.cpp
 CXXSRCS += ActuatorEffectivenessDualMagneticWheel.cpp
 CXXSRCS += DamiaoProtocol.cpp
+CXXSRCS += WorkQueue.cpp WorkQueueManager.cpp
 MAINSRC = RobotRuntime.cpp SbusInput.cpp RcUpdate.cpp param_main.cpp
 MAINSRC += ControlAllocator.cpp CanOutput.cpp Command.cpp
 MAINSRC += Failsafe.cpp
 MAINSRC += RobotControl.cpp
 
+CXXFLAGS += -DCBOARD_NUTTX
 CXXFLAGS += ${INCDIR_PREFIX}$(CURDIR)
 # 将显式入口映射到Kconfig命令名称，保留原来的命令改名能力。
 CXXFLAGS += -Drobot_main=$(subst ",,$(CONFIG_CBOARD_ROBOT_PROGNAME))_main
@@ -39,6 +41,7 @@ CXXFLAGS += -Dcommand_main=$(subst ",,$(CONFIG_CBOARD_COMMAND_PROGNAME))_main
 CXXFLAGS += -Dfailsafe_main=$(subst ",,$(CONFIG_CBOARD_FAILSAFE_PROGNAME))_main
 CXXFLAGS += -Drobot_control_main=$(subst ",,$(CONFIG_CBOARD_ROBOT_CONTROL_PROGNAME))_main
 VPATH += :robot/common:robot/os:robot/orb:robot/drivers/rc:robot/modules:robot/params
+VPATH += :robot/work_queue
 VPATH += :robot/configuration:robot/control:robot/output:protocol/can
 
 include $(APPDIR)/Application.mk

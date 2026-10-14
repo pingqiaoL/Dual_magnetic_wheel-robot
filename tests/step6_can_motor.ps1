@@ -118,6 +118,7 @@ g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
 g++ -std=c++14 -Wall -Wextra -Werror \
   -I"$root/build/generated" -I"$root" \
   tests/output_chain_test.cpp robot/modules/Command.cpp \
+  robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp \
   robot/output/MixingOutput.cpp robot/control/Allocation.cpp \
   robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
@@ -129,6 +130,7 @@ g++ -std=c++14 -Wall -Wextra -Werror \
 g++ -std=c++14 -Wall -Wextra -Werror \
   -I"$root/build/generated" -I"$root" \
   tests/failsafe_test.cpp robot/modules/Failsafe.cpp \
+  robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp \
   robot/modules/RobotControl.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp robot/orb/Topics.cpp \

@@ -115,8 +115,8 @@ foreach ($source in $businessSources) {
     if ($text -match '#include\s+[<"]stm32') {
         throw "Business code depends directly on STM32 headers: $($source.FullName)"
     }
-    if ($text -match '\bWorkQueue\b') {
-        throw "Step 3 must not depend on PX4 WorkQueue: $($source.FullName)"
+    if ($text -match '#include\s+[<"]px4_platform_common') {
+        throw "Project runtime must not depend on PX4 platform headers: $($source.FullName)"
     }
 }
 

@@ -1,6 +1,6 @@
 /**
  * @file ModuleBase.hpp
- * @brief 提供仿 PX4 CRTP 写法的模块公共入口和生命周期管理。
+ * @brief PX4 CRTP 写法的模块公共入口和生命周期管理。
  *
  * ModuleBase<T> 在对象创建前即可通过子类 T 的静态函数处理命令。
  * 子类需要实现 task_spawn、instantiate 和 print_usage；需要扩展命令时
@@ -86,7 +86,7 @@ public:
   }
 
   /**
-   * @brief 新线程入口，在任务线程内创建子类对象并执行 run。
+   * @brief 新线程入口，在任务线程内创建子类对象并执行 run。后续可以添加统一管理的线程，替代掉该函数
    * @return 模块正常结束返回 0，创建对象失败返回 -1。
    */
   static int run_trampoline(int argc, char *argv[])
@@ -132,6 +132,9 @@ public:
   virtual void run() = 0;
 
 protected:
+  /** Negative sentinel: a module object sharing a work queue, not an OS pid. */
+  static constexpr int WorkQueueTaskId = -2;
+  virtual bool stop_work_queue() { return false; }
   /** 向任务线程发出协作式停止请求。 */
   virtual void request_stop()
   {
@@ -236,6 +239,24 @@ private:
     _stopInProgress = true;
 
     T *object = get_instance();
+    if (__atomic_load_n(&_taskId, __ATOMIC_ACQUIRE) == WorkQueueTaskId)
+      {
+        // Do not hold the lifecycle lock while waiting for an in-flight Run.
+        unlock_module();
+        const bool stopped = object != nullptr && static_cast<ModuleBase<T> *>(object)->stop_work_queue();
+        lock_module();
+        if (stopped)
+          {
+            delete object;
+            __atomic_store_n(&_object, static_cast<T *>(nullptr), __ATOMIC_RELEASE);
+            __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+          }
+        // Timeout retains the disabled object; never kill a shared worker.
+        _stopInProgress = false;
+        unlock_module();
+        if (!stopped) { fprintf(stderr, "work item stop timed out; retry stop\n"); }
+        return stopped ? 0 : -1;
+      }
     if (object != nullptr)
       {
         object->request_stop();
@@ -263,17 +284,17 @@ private:
         lock_module();
         _stopInProgress = false;
         unlock_module();
-      lock_module();
-      const int taskId = __atomic_load_n(&_taskId, __ATOMIC_ACQUIRE);
-      (void)os::Task::terminate(taskId);
-      T *staleObject = __atomic_load_n(&_object, __ATOMIC_ACQUIRE);
-      delete staleObject;
-      __atomic_store_n(&_object, static_cast<T *>(nullptr), __ATOMIC_RELEASE);
-      __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
-      _stopInProgress = false;
-      unlock_module();
-      fprintf(stderr, "module stop timed out; task terminated\n");
-      return -1;
+        lock_module();
+        const int taskId = __atomic_load_n(&_taskId, __ATOMIC_ACQUIRE);
+        (void)os::Task::terminate(taskId);
+        T *staleObject = __atomic_load_n(&_object, __ATOMIC_ACQUIRE);
+        delete staleObject;
+        __atomic_store_n(&_object, static_cast<T *>(nullptr), __ATOMIC_RELEASE);
+        __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+        _stopInProgress = false;
+        unlock_module();
+        fprintf(stderr, "module stop timed out; task terminated\n");
+        return -1;
     }
 
     lock_module();
