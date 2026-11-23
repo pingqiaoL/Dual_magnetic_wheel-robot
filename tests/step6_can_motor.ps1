@@ -32,7 +32,7 @@ if ($profile -notmatch 'param set CA_AIRFRAME 1') {
     throw 'Numbered profile must select its actuator model.'
 }
 $runtime = Get-Content -LiteralPath (
-    Join-Path $projectRoot 'robot\modules\RobotRuntime.cpp') -Raw
+    Join-Path $projectRoot 'robot\modules\robot_runtime\RobotRuntime.cpp') -Raw
 foreach ($module in @('RcUpdate', 'SbusInput', 'Failsafe', 'RobotControl',
         'ControlAllocator', 'CanOutput', 'Command')) {
     if ($runtime -notmatch [regex]::Escape("$module::is_running()")) {
@@ -117,8 +117,8 @@ g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
 
 g++ -std=c++14 -Wall -Wextra -Werror \
   -I"$root/build/generated" -I"$root" \
-  tests/output_chain_test.cpp robot/modules/Command.cpp \
-  robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp \
+  tests/output_chain_test.cpp robot/modules/command/Command.cpp \
+  robot/work_queue/WorkItem.cpp robot/work_queue/ScheduledWorkItem.cpp robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp robot/work_queue/WorkQueueConfigurations.cpp \
   robot/output/MixingOutput.cpp robot/control/Allocation.cpp \
   robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
@@ -129,9 +129,9 @@ g++ -std=c++14 -Wall -Wextra -Werror \
 
 g++ -std=c++14 -Wall -Wextra -Werror \
   -I"$root/build/generated" -I"$root" \
-  tests/failsafe_test.cpp robot/modules/Failsafe.cpp \
-  robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp \
-  robot/modules/RobotControl.cpp \
+  tests/failsafe_test.cpp robot/modules/failsafe/Failsafe.cpp \
+  robot/work_queue/WorkItem.cpp robot/work_queue/ScheduledWorkItem.cpp robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp robot/work_queue/WorkQueueConfigurations.cpp \
+  robot/modules/robot_control/RobotControl.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \

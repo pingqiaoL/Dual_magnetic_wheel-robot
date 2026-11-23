@@ -2,7 +2,9 @@
  * @brief 按CA_AIRFRAME创建构型模型，使用通用算法发布执行器输出。
  */
 #pragma once
-#include "robot/common/WorkQueueModuleBase.hpp"
+#include "robot/common/ModuleBase.hpp"
+#include "robot/work_queue/ScheduledWorkItem.hpp"
+#include "robot/work_queue/WorkQueueConfigurations.hpp"
 #include "robot/orb/SubscriptionCallback.hpp"
 #include "robot/control/Allocation.hpp"
 #include "robot/orb/Topics.hpp"
@@ -10,16 +12,18 @@
 #include "robot/params/Param.hpp"
 
 /** 只负责参数化控制分配，不判断SA开关或发送CAN使能命令。 */
-class ControlAllocator final : public WorkQueueModuleBase<ControlAllocator>,
-                               public ModuleParams
+class ControlAllocator final : public ModuleBase<ControlAllocator>,
+                               public ModuleParams,
+                               public robot_wq::ScheduledWorkItem
 {
 public:
   /** 接管工厂创建的模型对象，并绑定安全目标和输出topic。 */
   ControlAllocator(int32_t modelId, ActuatorEffectiveness *effectiveness);
   /** 释放拥有的构型对象。 */
   ~ControlAllocator() override;
-  /** 从CA_AIRFRAME创建模型，兼容旧的-c climbot选项。 */
-  static ControlAllocator *instantiate(int argc, char *argv[]);
+  /** PX4-style module-owned startup: parse, new, store, init. */
+  static int task_spawn(int argc, char *argv[]);
+  bool init();
   /** 显示帮助。 */
   static int print_usage(const char *reason = nullptr);
   /** 显示当前构型和分配状态。 */
@@ -28,11 +32,13 @@ public:
   void Run() override;
 
 protected:
-  bool initWorkQueue() override;
-  void unregisterCallbacks() override;
-  void onWorkQueueStopped() override;
+  bool stop_work_queue() override;
 
 private:
+  void unregisterCallbacks();
+  void publishStoppedState();
+  static constexpr uint64_t BackupIntervalUs = 20000;
+  static constexpr uint64_t MinimumIntervalUs = 20000;
   /** 模型选择的唯一创建位置，新增机型时增加一个分支。 */
   static ActuatorEffectiveness *createEffectiveness(int32_t modelId);
   /** 刷新矩阵；运行中变更模型需停止后重新启动模块。 */

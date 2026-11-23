@@ -5,9 +5,11 @@
 
 #pragma once
 
-#include "robot/common/WorkQueueModuleBase.hpp"
+#include "robot/common/ModuleBase.hpp"
+#include "robot/work_queue/ScheduledWorkItem.hpp"
+#include "robot/work_queue/WorkQueueConfigurations.hpp"
 #include "robot/orb/SubscriptionCallback.hpp"
-#include "robot/modules/RcConfig.hpp"
+#include "robot/modules/rc_update/RcConfig.hpp"
 #include "robot/orb/Topics.hpp"
 #include "robot/params/ModuleParams.hpp"
 
@@ -17,15 +19,18 @@
  * @class RcUpdate
  * @brief 订阅 input_rc，输出 rc_channels、manual_control_input 和开关状态。
  */
-class RcUpdate final : public WorkQueueModuleBase<RcUpdate>, public ModuleParams
+class RcUpdate final : public ModuleBase<RcUpdate>, public ModuleParams,
+                               public robot_wq::ScheduledWorkItem
 {
 public:
   /** 绑定遥控链路所需的订阅器和发布器。 */
   RcUpdate();
+  ~RcUpdate() override;
 
 
-  /** 创建 RcUpdate 对象。 */
-  static RcUpdate *instantiate(int argc, char *argv[]);
+  /** PX4-style module-owned startup: parse, new, store, init. */
+  static int task_spawn(int argc, char *argv[]);
+  bool init();
 
   /** 打印 rc_update 命令帮助。 */
   static int print_usage(const char *reason = nullptr);
@@ -37,11 +42,13 @@ public:
   void Run() override;
 
 protected:
-  bool initWorkQueue() override;
-  void unregisterCallbacks() override;
-  void onWorkQueueStopped() override;
+  bool stop_work_queue() override;
 
 private:
+  void unregisterCallbacks();
+  void publishStoppedState();
+  static constexpr uint64_t BackupIntervalUs = 10000;
+  static constexpr uint64_t MinimumIntervalUs = 10000;
   /** 校准一帧输入并发布全部上层遥控 topic。 */
   void processInput(const InputRc &input, uint64_t now);
 

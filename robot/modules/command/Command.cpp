@@ -4,7 +4,7 @@
 #ifdef main
 #undef main
 #endif
-#include "robot/modules/Command.hpp"
+#include "robot/modules/command/Command.hpp"
 #include "robot/params/ParamManager.hpp"
 #include "robot/os/Clock.hpp"
 #include <stdio.h>
@@ -16,8 +16,8 @@ int32_t Command::_warningSwitch = 0;
 
 /** 建立订阅并读取兼容的CA_ARM_SW参数。 */
 Command::Command()
-  : WorkQueueModuleBase<Command>(robot_wq::SafetyQueue(), 20000),
-    ModuleParams(nullptr), _manualSubscription(manualControlTopic(), *this),
+  : ModuleParams(nullptr),
+    ScheduledWorkItem("command", robot_wq::wq_configurations::safety), _manualSubscription(manualControlTopic(), *this),
     _switchSubscription(manualControlSwitchesTopic(), *this),
     _parameterSubscription(parameterUpdateTopic(), *this),
     _armedPublication(actuatorArmedTopic()),
@@ -27,14 +27,44 @@ Command::Command()
   updateParameters();
 }
 
+/** 析构前解绑工作项，保证成员仍有效时完成停止。 */
+Command::~Command()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  // Normal NSH stop has already detached. Directly-owned instances must also
+  // finish execution before their members are destroyed.
+  while (!StopAndWait()) {}
+}
 
-
-/** 创建独立安全管理对象。 */
-Command *Command::instantiate(int argc, char *argv[])
+/** 模块显式启动入口：创建实例、保存状态并调用init。 */
+int Command::task_spawn(int argc, char *argv[])
 {
   (void)argc;
   (void)argv;
-  return new Command();
+  Command *instance = new Command();
+  if (instance == nullptr)
+    {
+      return -1;
+    }
+
+  __atomic_store_n(&_object, instance, __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, WorkQueueTaskId, __ATOMIC_RELEASE);
+  if (instance->init())
+    {
+      return 0;
+    }
+
+  // A failed init must release callbacks and wait before deleting the object.
+  if (!instance->stop_work_queue())
+    {
+      fprintf(stderr, "initialization cleanup timed out; retry stop\n");
+      return -1;
+    }
+  delete instance;
+  __atomic_store_n(&_object, static_cast<Command *>(nullptr), __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+  return -1;
 }
 
 /** 输出安全管理命令的帮助。 */
@@ -165,11 +195,19 @@ void Command::update(uint64_t now)
 }
 
 /** 50Hz刷新安全心跳；停任务后输出层会立即收到失锁消息。 */
-bool Command::initWorkQueue()
+bool Command::init()
 {
-  return _manualSubscription.registerCallback() &&
-         _switchSubscription.registerCallback() &&
-         _parameterSubscription.registerCallback();
+  if (!initialized()) { return false; }
+  // Explicitly separate message rate limit from the periodic backup deadline.
+  SetMinimumInterval(MinimumIntervalUs);
+  if (!(_manualSubscription.registerCallback() &&
+        _switchSubscription.registerCallback() &&
+        _parameterSubscription.registerCallback()))
+    { unregisterCallbacks(); return false; }
+  ActivateSchedule();
+  ScheduleDelayed(BackupIntervalUs);
+  ScheduleNow();
+  return true;
 }
 
 void Command::unregisterCallbacks()
@@ -181,10 +219,21 @@ void Command::unregisterCallbacks()
 
 void Command::Run()
 {
+  // Refresh the backup independently of whether a new message triggered Run.
+  ScheduleDelayed(BackupIntervalUs);
   update();
 }
 
-void Command::onWorkQueueStopped()
+bool Command::stop_work_queue()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  if (!StopAndWait()) { return false; }
+  publishStoppedState();
+  return true;
+}
+
+void Command::publishStoppedState()
 {
   ActuatorArmed stopped{};
   stopped.timestamp = os::Clock::nowMicroseconds();

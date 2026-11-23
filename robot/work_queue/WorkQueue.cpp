@@ -1,5 +1,4 @@
 #include "robot/work_queue/WorkQueue.hpp"
-#include "robot/work_queue/ScheduledWorkItem.hpp"
 #include "robot/os/Clock.hpp"
 #include "robot/os/Task.hpp"
 #include <assert.h>
@@ -11,25 +10,6 @@
 
 namespace robot_wq
 {
-WorkItem::WorkItem(WorkQueue &queue) : _queue(queue) {}
-WorkItem::~WorkItem()
-{
-  // Derived state must remain alive until callbacks and execution have stopped.
-  assert(!_attached);
-}
-bool WorkItem::Attach(uint64_t minimumIntervalUs)
-{ return _queue.Attach(*this, minimumIntervalUs); }
-void WorkItem::ScheduleNow() { _queue.Schedule(*this, 0); }
-bool WorkItem::StopAndWait(uint32_t timeoutMs)
-{ return _queue.Detach(*this, timeoutMs); }
-bool ScheduledWorkItem::InitSchedule(uint64_t minimumIntervalUs)
-{ return Attach(minimumIntervalUs); }
-void ScheduledWorkItem::ScheduleDelayed(uint64_t delayUs)
-{ _queue.Schedule(*this, delayUs); }
-void ScheduledWorkItem::ScheduleOnInterval(uint64_t intervalUs)
-{ _queue.SetInterval(*this, intervalUs); }
-void ScheduledWorkItem::ScheduleClear() { _queue.Clear(*this); }
-
 WorkQueue::WorkQueue(const char *name, int priority, size_t stackSize)
   : _name(name), _priority(priority), _stackSize(stackSize)
 {
@@ -155,6 +135,21 @@ bool WorkQueue::Detach(WorkItem &item, uint32_t timeoutMs)
   item._attached = false;
   pthread_mutex_unlock(&_mutex);
   return true;
+}
+
+void WorkQueue::Activate(WorkItem &item)
+{
+  pthread_mutex_lock(&_mutex);
+  if (item._attached && !item._stopping) { item._enabled = true; }
+  pthread_mutex_unlock(&_mutex);
+}
+
+void WorkQueue::SetMinimumInterval(WorkItem &item, uint64_t intervalUs)
+{
+  pthread_mutex_lock(&_mutex);
+  item._minimumInterval = intervalUs;
+  pthread_cond_broadcast(&_condition);
+  pthread_mutex_unlock(&_mutex);
 }
 
 void WorkQueue::Schedule(WorkItem &item, uint64_t delayUs)

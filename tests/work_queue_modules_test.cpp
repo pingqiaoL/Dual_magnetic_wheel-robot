@@ -1,8 +1,9 @@
-#include "robot/modules/RcUpdate.hpp"
-#include "robot/modules/Command.hpp"
-#include "robot/modules/Failsafe.hpp"
-#include "robot/modules/RobotControl.hpp"
-#include "robot/modules/ControlAllocator.hpp"
+#include "robot/modules/rc_update/RcUpdate.hpp"
+#include "robot/modules/command/Command.hpp"
+#include "robot/modules/failsafe/Failsafe.hpp"
+#include "robot/modules/robot_control/RobotControl.hpp"
+#include "robot/modules/control_allocator/ControlAllocator.hpp"
+#include "robot/work_queue/WorkQueueManager.hpp"
 #include "robot/params/ParamManager.hpp"
 #include "robot/os/Clock.hpp"
 #include <assert.h>
@@ -29,11 +30,29 @@ static void waitFor(Predicate predicate, uint32_t timeoutMs = 1500)
     { os::Clock::sleepMilliseconds(2); }
   assert(predicate());
 }
+class ReservedCallback final : public uorb::Callback
+{
+  void onTopicUpdate() override {}
+};
 int main()
 {
   ParamManager &params = ParamManager::instance();
   assert(params.set(params.find("FS_RC_TMO"), 0.1f));
-  assert(robot_wq::Initialize());
+  // A failed init must clean up partially registered callbacks and its object.
+  ReservedCallback reserved[8];
+  for (auto &callback : reserved) { assert(parameterUpdateTopic().registerCallback(callback)); }
+  assert(command<Command>("start") != 0);
+  assert(!Command::is_running());
+  assert(robot_wq::SafetyQueue().Status().items == 0);
+  for (auto &callback : reserved) { parameterUpdateTopic().unregisterCallback(callback); }
+  char allocatorName[] = "control_allocator";
+  char start[] = "start";
+  char option[] = "-c";
+  char unsupported[] = "unsupported";
+  char *invalidArgs[] = {allocatorName, start, option, unsupported};
+  assert(ControlAllocator::main(4, invalidArgs) != 0);
+  assert(!ControlAllocator::is_running());
+  assert(robot_wq::ControlQueue().Status().items == 0);
   assert(command<RcUpdate>("start") == 0);
   assert(command<Failsafe>("start") == 0);
   assert(command<RobotControl>("start") == 0);
@@ -86,8 +105,18 @@ int main()
   // Stop/start must unregister old callbacks and release objects.
   for (unsigned i = 0; i < 10; ++i)
     {
+      assert(command<RcUpdate>("start") == 0);
+      assert(command<Failsafe>("start") == 0);
+      assert(command<RobotControl>("start") == 0);
+      assert(command<ControlAllocator>("start") == 0);
       assert(command<Command>("start") == 0);
       assert(command<Command>("stop") == 0);
+      assert(command<ControlAllocator>("stop") == 0);
+      assert(command<RobotControl>("stop") == 0);
+      assert(command<Failsafe>("stop") == 0);
+      assert(command<RcUpdate>("stop") == 0);
+      assert(robot_wq::SafetyQueue().Status().items == 0);
+      assert(robot_wq::ControlQueue().Status().items == 0);
     }
   assert(robot_wq::SafetyQueue().Status().items == 0);
   assert(robot_wq::ControlQueue().Status().items == 0);

@@ -1,8 +1,8 @@
 /** @file failsafe_test.cpp
  * @brief 验证Failsafe只发布标志，RobotControl应用目标策略。
  */
-#include "robot/modules/Failsafe.hpp"
-#include "robot/modules/RobotControl.hpp"
+#include "robot/modules/failsafe/Failsafe.hpp"
+#include "robot/modules/robot_control/RobotControl.hpp"
 #include "robot/params/ParamManager.hpp"
 #include <assert.h>
 #include <math.h>

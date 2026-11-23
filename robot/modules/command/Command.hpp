@@ -2,7 +2,9 @@
  * @brief 接收遥控状态、执行一次性上电互锁并发布解锁信息。
  */
 #pragma once
-#include "robot/common/WorkQueueModuleBase.hpp"
+#include "robot/common/ModuleBase.hpp"
+#include "robot/work_queue/ScheduledWorkItem.hpp"
+#include "robot/work_queue/WorkQueueConfigurations.hpp"
 #include "robot/orb/SubscriptionCallback.hpp"
 #include "robot/control/ArmSafety.hpp"
 #include "robot/orb/Topics.hpp"
@@ -10,13 +12,16 @@
 #include "robot/params/Param.hpp"
 
 /** 安全工作队列中的管理模块，并自行处理手动输出禁止扩展命令。 */
-class Command final : public WorkQueueModuleBase<Command>, public ModuleParams
+class Command final : public ModuleBase<Command>, public ModuleParams,
+                               public robot_wq::ScheduledWorkItem
 {
 public:
   /** 绑定遥控、开关和参数订阅，初始状态禁止解锁。 */
   Command();
-  /** 创建安全管理对象，不接受额外启动参数。 */
-  static Command *instantiate(int argc, char *argv[]);
+  ~Command() override;
+  /** PX4-style module-owned startup: parse, new, store, init. */
+  static int task_spawn(int argc, char *argv[]);
+  bool init();
   /** 输出命令帮助。 */
   static int print_usage(const char *reason = nullptr);
   /** 处理enable和disable扩展命令。 */
@@ -35,11 +40,13 @@ public:
   static void reportWarnings();
 
 protected:
-  bool initWorkQueue() override;
-  void unregisterCallbacks() override;
-  void onWorkQueueStopped() override;
+  bool stop_work_queue() override;
 
 private:
+  void unregisterCallbacks();
+  void publishStoppedState();
+  static constexpr uint64_t BackupIntervalUs = 20000;
+  static constexpr uint64_t MinimumIntervalUs = 20000;
   /** 刷新安全开关编号；映射变化时重新要求OFF。 */
   void updateParameters();
   /** 验证输入有效性和时间，返回安全开关位置。 */

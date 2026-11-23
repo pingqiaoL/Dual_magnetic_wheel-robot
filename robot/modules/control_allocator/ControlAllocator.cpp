@@ -4,7 +4,7 @@
 #ifdef main
 #undef main
 #endif
-#include "robot/modules/ControlAllocator.hpp"
+#include "robot/modules/control_allocator/ControlAllocator.hpp"
 #include "robot/control/ActuatorEffectivenessDualMagneticWheel.hpp"
 #include "robot/params/ParamManager.hpp"
 #include "robot/os/Clock.hpp"
@@ -13,8 +13,9 @@
 
 /** 模型归模块所有；Allocation只引用同一个模型，不再复制构型信息。 */
 ControlAllocator::ControlAllocator(int32_t modelId, ActuatorEffectiveness *effectiveness)
-  : WorkQueueModuleBase<ControlAllocator>(robot_wq::ControlQueue(), 20000),
-    ModuleParams(nullptr), _modelId(modelId),
+  : ModuleParams(nullptr),
+    ScheduledWorkItem("control_allocator", robot_wq::wq_configurations::control),
+    _modelId(modelId),
     _paramAirframe(this, "CA_AIRFRAME", 1),
     _effectiveness(effectiveness), _allocation(*effectiveness),
     _setpointSubscription(robotControlSetpointTopic(), *this),
@@ -27,13 +28,16 @@ ControlAllocator::ControlAllocator(int32_t modelId, ActuatorEffectiveness *effec
   updateParameters();
 }
 
-/** 释放已退出任务持有的构型对象。 */
+/** 析构前解绑工作项，保证成员仍有效时完成停止。 */
 ControlAllocator::~ControlAllocator()
 {
+  unregisterCallbacks();
+  ScheduleClear();
+  // Normal NSH stop has already detached. Directly-owned instances must also
+  // finish execution before their members are destroyed.
+  while (!StopAndWait()) {}
   delete _effectiveness;
 }
-
-
 
 /** 每个编号对应一个构型子类，不支持的编号拒绝启动。 */
 ActuatorEffectiveness *ControlAllocator::createEffectiveness(int32_t modelId)
@@ -48,21 +52,39 @@ ActuatorEffectiveness *ControlAllocator::createEffectiveness(int32_t modelId)
 }
 
 /** 模型编号由参数决定；旧-c climbot只用于检查兼容性。 */
-ControlAllocator *ControlAllocator::instantiate(int argc, char *argv[])
+/** 模块显式启动入口：创建实例、保存状态并调用init。 */
+int ControlAllocator::task_spawn(int argc, char *argv[])
 {
   int32_t modelId = 0;
-  if (!ParamManager::instance().get("CA_AIRFRAME", modelId)) { return nullptr; }
+  if (!ParamManager::instance().get("CA_AIRFRAME", modelId)) { return -1; }
   for (int index = 1; index < argc; ++index)
     {
       if (strcmp(argv[index], "-c") != 0 || index + 1 >= argc ||
           strcmp(argv[++index], "climbot") != 0 || modelId != 1)
-        { print_usage("unsupported configuration option"); return nullptr; }
+        { print_usage("unsupported configuration option"); return -1; }
     }
   ActuatorEffectiveness *effectiveness = createEffectiveness(modelId);
-  if (effectiveness == nullptr) { return nullptr; }
-  ControlAllocator *module = new ControlAllocator(modelId, effectiveness);
-  if (module == nullptr) { delete effectiveness; }
-  return module;
+  if (effectiveness == nullptr) { return -1; }
+  ControlAllocator *instance = new ControlAllocator(modelId, effectiveness);
+  if (instance == nullptr) { delete effectiveness; return -1; }
+
+  __atomic_store_n(&_object, instance, __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, WorkQueueTaskId, __ATOMIC_RELEASE);
+  if (instance->init())
+    {
+      return 0;
+    }
+
+  // A failed init must release callbacks and wait before deleting the object.
+  if (!instance->stop_work_queue())
+    {
+      fprintf(stderr, "initialization cleanup timed out; retry stop\n");
+      return -1;
+    }
+  delete instance;
+  __atomic_store_n(&_object, static_cast<ControlAllocator *>(nullptr), __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+  return -1;
 }
 
 /** 打印生命周期命令和模型选择参数。 */
@@ -107,10 +129,18 @@ void ControlAllocator::updateParameters()
 }
 
 /** 本任务只执行构型分配；RC丢失目标策略属于RobotControl。 */
-bool ControlAllocator::initWorkQueue()
+bool ControlAllocator::init()
 {
-  return _setpointSubscription.registerCallback() &&
-         _parameterSubscription.registerCallback();
+  if (!initialized()) { return false; }
+  // Explicitly separate message rate limit from the periodic backup deadline.
+  SetMinimumInterval(MinimumIntervalUs);
+  if (!(_setpointSubscription.registerCallback() &&
+        _parameterSubscription.registerCallback()))
+    { unregisterCallbacks(); return false; }
+  ActivateSchedule();
+  ScheduleDelayed(BackupIntervalUs);
+  ScheduleNow();
+  return true;
 }
 
 void ControlAllocator::unregisterCallbacks()
@@ -121,6 +151,8 @@ void ControlAllocator::unregisterCallbacks()
 
 void ControlAllocator::Run()
 {
+  // Refresh the backup independently of whether a new message triggered Run.
+  ScheduleDelayed(BackupIntervalUs);
   os::LockGuard guard(_stateMutex);
   if (!guard.locked()) { return; }
   ParameterUpdate update{};
@@ -145,7 +177,16 @@ void ControlAllocator::Run()
   ++_allocationCount;
 }
 
-void ControlAllocator::onWorkQueueStopped()
+bool ControlAllocator::stop_work_queue()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  if (!StopAndWait()) { return false; }
+  publishStoppedState();
+  return true;
+}
+
+void ControlAllocator::publishStoppedState()
 {
   // 退出立即发布无效输出，避免等待缓存超时才停止驱动。
   ActuatorMotors motors{};

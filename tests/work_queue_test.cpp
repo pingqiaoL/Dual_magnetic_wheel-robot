@@ -1,5 +1,6 @@
 #include "robot/work_queue/WorkQueue.hpp"
 #include "robot/work_queue/ScheduledWorkItem.hpp"
+#include "robot/work_queue/WorkQueueManager.hpp"
 #include "robot/orb/SubscriptionCallback.hpp"
 #include "robot/os/Clock.hpp"
 #include <atomic>
@@ -14,7 +15,9 @@ public:
   explicit Item(robot_wq::WorkQueue &queue) : ScheduledWorkItem(queue) {}
   void Run() override
   {
-    ++runs;
+    const unsigned invocation = ++runs;
+    if (invocation == 1) { firstStart = os::Clock::nowMicroseconds(); }
+    if (invocation == 2) { secondStart = os::Clock::nowMicroseconds(); }
     entered = true;
     // Intentional blocking only in this test, to exercise stop timeout.
     while (hold.load()) { os::Clock::sleepMilliseconds(1); }
@@ -22,6 +25,8 @@ public:
   std::atomic<unsigned> runs{0};
   std::atomic<bool> hold{false};
   std::atomic<bool> entered{false};
+  std::atomic<uint64_t> firstStart{0};
+  std::atomic<uint64_t> secondStart{0};
 };
 template<class Predicate>
 static void waitFor(Predicate predicate, uint32_t timeoutMs = 1000)
@@ -34,9 +39,14 @@ static void waitFor(Predicate predicate, uint32_t timeoutMs = 1000)
 
 int main()
 {
+  const robot_wq::wq_config_t unknown{"unknown", 105, 8192};
+  assert(robot_wq::WorkQueueFindOrCreate(unknown) == nullptr);
+  const robot_wq::wq_config_t mismatched{"wq_safety", 105, 8192};
+  assert(robot_wq::WorkQueueFindOrCreate(mismatched) == nullptr);
   robot_wq::WorkQueue queue("test", 105, 8192);
   Item item(queue);
-  assert(item.InitSchedule(30000));
+  assert(item.initialized());
+  item.SetMinimumInterval(30000);
   uorb::Topic<Message> topic;
   uorb::SubscriptionCallbackWorkItem<Message> callback(topic, item);
   assert(callback.registerCallback());
@@ -45,16 +55,20 @@ int main()
   os::Clock::sleepMilliseconds(10);
   assert(item.runs == 0);
   item.ScheduleOnInterval(0); // Activate without a periodic timer.
+  item.hold = true;
   item.ScheduleDelayed(80000);
   os::Clock::sleepMilliseconds(10);
   assert(item.runs == 0);
   // A new earlier deadline must wake a worker already waiting for a later one.
   assert(topic.publish(Message{}));
-  waitFor([&] { return item.runs == 1; });
+  waitFor([&] { return item.entered.load(); });
   for (unsigned i = 0; i < 100; ++i) { assert(topic.publish(Message{i})); }
-  os::Clock::sleepMilliseconds(5);
-  assert(item.runs == 1); // Rate limit; 100 notifications coalesce to one.
+  assert(item.runs == 1); // Deterministic: the first Run is held by a barrier.
+  item.hold = false;
   waitFor([&] { return item.runs == 2; });
+  waitFor([&] { return item.secondStart.load() != 0; });
+  // Host scheduling is not a realtime clock; allow 10ms measurement skew.
+  assert(item.secondStart - item.firstStart >= 20000);
   os::Clock::sleepMilliseconds(50);
   assert(item.runs == 2);
   item.ScheduleOnInterval(30000);
@@ -69,7 +83,8 @@ int main()
 
   // A timed-out detach must retain the live object, not destroy the worker.
   Item held(queue);
-  assert(held.InitSchedule(0));
+  assert(held.initialized());
+  held.SetMinimumInterval(0);
   held.ScheduleOnInterval(0);
   held.hold = true;
   held.ScheduleNow();
@@ -82,7 +97,8 @@ int main()
   for (unsigned iteration = 0; iteration < 30; ++iteration)
     {
       Item temporary(queue);
-      assert(temporary.InitSchedule(1000));
+      assert(temporary.initialized());
+      temporary.SetMinimumInterval(1000);
       temporary.ScheduleOnInterval(0);
       uorb::SubscriptionCallbackWorkItem<Message> subscription(topic, temporary);
       assert(subscription.registerCallback());

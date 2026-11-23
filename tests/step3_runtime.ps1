@@ -15,12 +15,12 @@ $requiredFiles = @(
     'robot\os\Semaphore.cpp',
     'robot\os\Clock.hpp',
     'robot\os\Clock.cpp',
-    'robot\modules\RobotRuntime.hpp',
-    'robot\modules\RobotRuntime.cpp',
+    'robot\modules\robot_runtime\RobotRuntime.hpp',
+    'robot\modules\robot_runtime\RobotRuntime.cpp',
     'config\nuttx\Kconfig',
     'config\nuttx\Make.defs',
     'config\nuttx\Makefile',
-    'robot\modules\RobotRuntime.cpp',
+    'robot\modules\robot_runtime\RobotRuntime.cpp',
     'startup\etc\init.d\rcS',
     'startup\etc\init.d\rc.sysinit',
     'tools\generate_romfs.py'
@@ -47,7 +47,7 @@ foreach ($setting in @(
 }
 
 $robotMain = Get-Content -LiteralPath (
-    Join-Path $projectRoot 'robot\modules\RobotRuntime.cpp') -Raw
+    Join-Path $projectRoot 'robot\modules\robot_runtime\RobotRuntime.cpp') -Raw
 if ($robotMain -notmatch 'RobotRuntime::main\(argc, argv\)') {
     throw 'robot command does not delegate to the CRTP ModuleBase entry.'
 }
@@ -57,14 +57,14 @@ if (Test-Path -LiteralPath (Join-Path $projectRoot 'apps')) {
     throw 'Project-owned apps directory must be removed.'
 }
 $moduleEntries = @{
-    'robot\modules\RobotRuntime.cpp' = 'robot_main'
-    'robot\modules\SbusInput.cpp' = 'sbus_input_main'
-    'robot\modules\RcUpdate.cpp' = 'rc_update_main'
-    'robot\modules\Failsafe.cpp' = 'failsafe_main'
-    'robot\modules\RobotControl.cpp' = 'robot_control_main'
-    'robot\modules\ControlAllocator.cpp' = 'control_allocator_main'
-    'robot\modules\Command.cpp' = 'command_main'
-    'robot\output\CanOutput.cpp' = 'can_output_main'
+    'robot\modules\robot_runtime\RobotRuntime.cpp' = 'robot_main'
+    'robot\modules\sbus_input\SbusInput.cpp' = 'sbus_input_main'
+    'robot\modules\rc_update\RcUpdate.cpp' = 'rc_update_main'
+    'robot\modules\failsafe\Failsafe.cpp' = 'failsafe_main'
+    'robot\modules\robot_control\RobotControl.cpp' = 'robot_control_main'
+    'robot\modules\control_allocator\ControlAllocator.cpp' = 'control_allocator_main'
+    'robot\modules\command\Command.cpp' = 'command_main'
+    'robot\output\can_output\CanOutput.cpp' = 'can_output_main'
 }
 foreach ($file in $moduleEntries.Keys) {
     $source = Get-Content -LiteralPath (Join-Path $projectRoot $file) -Raw

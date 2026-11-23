@@ -9,7 +9,7 @@
 #undef main
 #endif
 
-#include "robot/modules/RcUpdate.hpp"
+#include "robot/modules/rc_update/RcUpdate.hpp"
 
 #include "robot/os/Clock.hpp"
 
@@ -17,8 +17,9 @@
 
 /** 初始化 uORB 端点和 RC 链路状态。 */
 RcUpdate::RcUpdate()
-    : WorkQueueModuleBase<RcUpdate>(robot_wq::SafetyQueue(), 10000),
-    ModuleParams(nullptr), _config(this),
+    : ModuleParams(nullptr),
+    ScheduledWorkItem("rc_update", robot_wq::wq_configurations::safety),
+      _config(this),
       _inputSubscription(inputRcTopic(), *this),
       _parameterSubscription(parameterUpdateTopic(), *this),
       _channelsPublication(rcChannelsTopic()),
@@ -33,14 +34,44 @@ RcUpdate::RcUpdate()
 {
 }
 
+/** 析构前解绑工作项，保证成员仍有效时完成停止。 */
+RcUpdate::~RcUpdate()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  // Normal NSH stop has already detached. Directly-owned instances must also
+  // finish execution before their members are destroyed.
+  while (!StopAndWait()) {}
+}
 
-
-/** 创建不依赖硬件文件描述符的 rc_update 对象。 */
-RcUpdate *RcUpdate::instantiate(int argc, char *argv[])
+/** 模块显式启动入口：创建实例、保存状态并调用init。 */
+int RcUpdate::task_spawn(int argc, char *argv[])
 {
   (void)argc;
   (void)argv;
-  return new RcUpdate();
+  RcUpdate *instance = new RcUpdate();
+  if (instance == nullptr)
+    {
+      return -1;
+    }
+
+  __atomic_store_n(&_object, instance, __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, WorkQueueTaskId, __ATOMIC_RELEASE);
+  if (instance->init())
+    {
+      return 0;
+    }
+
+  // A failed init must release callbacks and wait before deleting the object.
+  if (!instance->stop_work_queue())
+    {
+      fprintf(stderr, "initialization cleanup timed out; retry stop\n");
+      return -1;
+    }
+  delete instance;
+  __atomic_store_n(&_object, static_cast<RcUpdate *>(nullptr), __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+  return -1;
 }
 
 /** 打印 rc_update 的标准生命周期命令。 */
@@ -102,11 +133,19 @@ int RcUpdate::print_status()
 }
 
 /** 注册消息触发；无输入时仍由定时兜底检查超时。 */
-bool RcUpdate::initWorkQueue()
+bool RcUpdate::init()
 {
+  if (!initialized()) { return false; }
+  // Explicitly separate message rate limit from the periodic backup deadline.
+  SetMinimumInterval(MinimumIntervalUs);
   _lastInputTimestamp = os::Clock::nowMicroseconds();
-  return _inputSubscription.registerCallback() &&
-         _parameterSubscription.registerCallback();
+  if (!(_inputSubscription.registerCallback() &&
+        _parameterSubscription.registerCallback()))
+    { unregisterCallbacks(); return false; }
+  ActivateSchedule();
+  ScheduleDelayed(BackupIntervalUs);
+  ScheduleNow();
+  return true;
 }
 
 void RcUpdate::unregisterCallbacks()
@@ -117,6 +156,8 @@ void RcUpdate::unregisterCallbacks()
 
 void RcUpdate::Run()
 {
+  // Refresh the backup independently of whether a new message triggered Run.
+  ScheduleDelayed(BackupIntervalUs);
   os::LockGuard guard(_stateMutex);
   if (!guard.locked()) { return; }
   const uint64_t now = os::Clock::nowMicroseconds();
@@ -127,7 +168,16 @@ void RcUpdate::Run()
   else { publishTimeoutIfNeeded(now); }
 }
 
-void RcUpdate::onWorkQueueStopped()
+bool RcUpdate::stop_work_queue()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  if (!StopAndWait()) { return false; }
+  publishStoppedState();
+  return true;
+}
+
+void RcUpdate::publishStoppedState()
 {
   RcChannels channels{};
   channels.timestamp = os::Clock::nowMicroseconds();

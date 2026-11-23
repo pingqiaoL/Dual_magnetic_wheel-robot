@@ -7,8 +7,8 @@
 - `robot/common/ModuleBase.hpp`：仅用头文件实现 CRTP 模块父类，统一 `start`、`stop`、`status`、线程入口、对象创建和释放。
 - `robot/os/Task.*`：线程名称、优先级、栈大小、创建与回收。
 - `robot/os/Mutex.*`、`Semaphore.*`、`Clock.*`：NuttX/POSIX 原语的薄封装。
-- `robot/modules/RobotRuntime.*`：无硬件输出的基础运行任务，100 ms 一次循环。
-- `robot/modules/RobotRuntime.cpp末尾的robot_main`：注册为 NSH 内置命令 `robot`。
+- `robot/modules/robot_runtime/RobotRuntime.*`：无硬件输出的基础运行任务，100 ms 一次循环。
+- `robot/modules/robot_runtime/RobotRuntime.cpp末尾的robot_main`：注册为 NSH 内置命令 `robot`。
 - `startup/etc/init.d/rcS`：启动时执行 `robot start`。
 
 构建脚本将config/nuttx构建文件和业务源码复制到可丢弃的 `upstream/apps/cboard` 构建目录，并把 `startup/etc` 生成为板级 ROMFS。不要直接修改同步后的上游目录。

@@ -16,14 +16,14 @@ $requiredFiles = @(
     'msg\ManualControl.msg',
     'msg\ManualControlSwitches.msg',
     'tools\generate_messages.py',
-    'robot\modules\SbusInput.hpp',
-    'robot\modules\SbusInput.cpp',
-    'robot\modules\RcConfig.hpp',
-    'robot\modules\RcConfig.cpp',
-    'robot\modules\RcUpdate.hpp',
-    'robot\modules\RcUpdate.cpp',
-    'robot\modules\SbusInput.cpp',
-    'robot\modules\RcUpdate.cpp'
+    'robot\modules\sbus_input\SbusInput.hpp',
+    'robot\modules\sbus_input\SbusInput.cpp',
+    'robot\modules\rc_update\RcConfig.hpp',
+    'robot\modules\rc_update\RcConfig.cpp',
+    'robot\modules\rc_update\RcUpdate.hpp',
+    'robot\modules\rc_update\RcUpdate.cpp',
+    'robot\modules\sbus_input\SbusInput.cpp',
+    'robot\modules\rc_update\RcUpdate.cpp'
 )
 
 $missing = @($requiredFiles | Where-Object {
@@ -66,7 +66,7 @@ foreach ($command in @('rc_update start', 'sbus_input start -d /dev/ttyS2')) {
 }
 
 $sbusInput = Get-Content -LiteralPath (
-    Join-Path $projectRoot 'robot\modules\SbusInput.cpp') -Raw
+    Join-Path $projectRoot 'robot\modules\sbus_input\SbusInput.cpp') -Raw
 foreach ($notice in @('MK32 RC not connected; waiting',
         'MK32 RC connected', 'rcLost = true')) {
     if ($sbusInput -notmatch [regex]::Escape($notice)) {
@@ -101,7 +101,7 @@ cd "$root"
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
   tests/sbus_decoder_test.cpp \
   robot/drivers/rc/sbus.cpp \
-  robot/modules/RcConfig.cpp \
+  robot/modules/rc_update/RcConfig.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp \
   robot/orb/Topics.cpp robot/os/Mutex.cpp robot/os/Clock.cpp \

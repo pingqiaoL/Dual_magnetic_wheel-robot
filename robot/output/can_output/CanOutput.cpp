@@ -9,10 +9,10 @@
 #undef main
 #endif
 
-#include "robot/output/CanOutput.hpp"
+#include "robot/output/can_output/CanOutput.hpp"
 
 #include "robot/os/Clock.hpp"
-#include "robot/modules/Command.hpp"
+#include "robot/modules/command/Command.hpp"
 #include "robot/params/ParamManager.hpp"
 
 #include <errno.h>

@@ -77,3 +77,9 @@ The build command configures `dji_cboard:robot`, builds NuttX, and copies user-f
 See `docs/development-baseline.md`, `docs/hardware-resource-map.md`,
 `docs/source-layout.md`, `docs/step2-bsp.md`, and `docs/step4-rc-input.md`
 before adding drivers or upper-level control modules.
+
+2026-10-14: modules use explicit PX4-style task_spawn entry points. Queued
+modules inherit ModuleBase, ModuleParams and ScheduledWorkItem directly;
+constructors select WorkQueueConfigurations and init registers callbacks and
+schedules execution. Independent tasks retain instantiate and run. Each module
+has its own directory. See docs/10.14修改文档.md.

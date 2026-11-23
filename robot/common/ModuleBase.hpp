@@ -3,9 +3,9 @@
  * @brief PX4 CRTP 写法的模块公共入口和生命周期管理。
  *
  * ModuleBase<T> 在对象创建前即可通过子类 T 的静态函数处理命令。
- * 子类需要实现 task_spawn、instantiate 和 print_usage；需要扩展命令时
+ * 子类实现 task_spawn 和 print_usage；独立任务另实现 instantiate、run；需要扩展命令时
  * 重写静态 custom_command，其他子类使用父类的默认错误提示。
- * 并重写 run；父类统一完成 start、stop、status、线程跳板和对象释放。
+ * 工作队列模块重写 Run；父类统一完成 start、stop、status 和对象生命周期管理。
  * 模板的全部实现必须放在头文件中，因此本模块没有对应的 .cpp 文件。
  */
 
@@ -86,7 +86,7 @@ public:
   }
 
   /**
-   * @brief 新线程入口，在任务线程内创建子类对象并执行 run。后续可以添加统一管理的线程，替代掉该函数
+   * @brief 独立任务入口，在任务线程内调用 instantiate 创建对象并执行 run。
    * @return 模块正常结束返回 0，创建对象失败返回 -1。
    */
   static int run_trampoline(int argc, char *argv[])
@@ -128,8 +128,8 @@ public:
     return 0;
   }
 
-  /** 模块任务主循环，由具体子类重写。 */
-  virtual void run() = 0;
+  /** 独立任务重写主循环；工作队列模块通过 ScheduledWorkItem::Run 执行。 */
+  virtual void run() {}
 
 protected:
   /** Negative sentinel: a module object sharing a work queue, not an OS pid. */
@@ -191,7 +191,7 @@ protected:
   /** 每种子类独立拥有的当前运行对象指针。 */
   static T *_object;
 
-  /** 每种子类独立拥有的任务标志，-1 表示未运行，1 表示启动或运行中。 */
+  /** 每种子类独立拥有的任务标志，-1 表示未运行，-2 表示工作队列，非负值为独立任务 PID。 */
   static int _taskId;
 
 private:

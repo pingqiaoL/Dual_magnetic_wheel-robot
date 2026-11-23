@@ -3,7 +3,7 @@
  * @brief 实现 MK32 默认映射、校准检查和通道归一化算法。
  */
 
-#include "robot/modules/RcConfig.hpp"
+#include "robot/modules/rc_update/RcConfig.hpp"
 
 #include "msg/ManualControlSwitches.hpp"
 #include "robot/params/ParamManager.hpp"

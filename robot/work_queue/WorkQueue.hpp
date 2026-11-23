@@ -28,6 +28,8 @@ public:
   bool Shutdown();
   bool Attach(WorkItem &item, uint64_t minimumIntervalUs);
   bool Detach(WorkItem &item, uint32_t timeoutMs);
+  void Activate(WorkItem &item);
+  void SetMinimumInterval(WorkItem &item, uint64_t intervalUs);
   void Schedule(WorkItem &item, uint64_t delayUs);
   void SetInterval(WorkItem &item, uint64_t intervalUs);
   void Clear(WorkItem &item);

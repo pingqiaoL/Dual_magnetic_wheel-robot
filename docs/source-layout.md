@@ -12,7 +12,8 @@ _code/
 │  ├─ configuration/         # RobotConfiguration统计父类
 │  ├─ control/               # ActuatorEffectiveness模型与Allocation算法
 │  ├─ output/                 # OutputInterface 与 MixingOutput
-│  ├─ modules/                # 遥控、控制、执行器、安全等任务
+│  ├─ modules/                # 每个模块独立目录，统一NSH生命周期入口
+│  ├─ work_queue/             # 队列配置、管理、WorkItem和定时执行引擎
 │  └─ os/                     # 线程、同步、时间的薄封装
 ├─ platform/dji_cboard/       # STM32F407IGH6 板级配置与驱动适配
 ├─ protocol/                  # MAVLink、SBUS 和设备协议
@@ -42,5 +43,16 @@ protocol parsers ──> msg 中的普通数据结构 ──> orb
 - 下位机测厚仪驱动不进入此树；测厚数据由上位机读取。
 - 机器人构型、执行器数量和通道映射放在构型配置中，不散落在驱动代码内。
 
-扩展命令由各模块自己的`custom_command()`处理；解锁管理在`robot/modules/Command.cpp`。
+扩展命令由各模块自己的`custom_command()`处理；解锁管理在`robot/modules/command/Command.cpp`。
 完整启动顺序、模型增加方式和测试说明见`step6-damiao-motor-framework.md`。
+
+## 模块创建与目录
+
+`robot_runtime/`、`sbus_input/`使用独立任务；`rc_update/`、`command/`、
+`failsafe/`、`robot_control/`、`control_allocator/`使用工作队列。
+CAN独立任务位于`robot/output/can_output/`，RcConfig与RcUpdate同目录。
+
+共同入口为`module_main → ModuleBase::main → task_spawn`。
+队列模块的构造函数选择队列，task_spawn创建对象后调用init，工作队列执行Run；
+独立任务的task_spawn指定优先级和栈，run_trampoline调用instantiate后执行run。
+详见`10.14修改文档.md`。

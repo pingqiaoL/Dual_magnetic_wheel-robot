@@ -16,11 +16,11 @@ MK32 遥控器
 ## 各层职责
 
 - `robot/drivers/rc/sbus.*` 只负责 25 字节 SBUS 帧同步、16 路 11 位通道解包、丢帧和 failsafe 标志解析，不依赖 NuttX 串口。
-- `robot/modules/SbusInput.*` 配置 USART3，读取串口字节并发布原始 `input_rc`。
+- `robot/modules/sbus_input/SbusInput.*` 配置 USART3，读取串口字节并发布原始 `input_rc`。
 - `msg/` 用 `.msg` 文件统一定义 `InputRc`、`RcChannels`、`ManualControl` 等全部 uORB 消息，构建时自动生成 C++ 结构体。
 - `robot/orb/` 只用最新值缓存和 generation 实现轻量 uORB，使驱动层和处理层互不包含、互不调用。
-- `robot/modules/RcConfig.*` 保存 16 路 MIN、MAX、TRIM、DEADZONE、REV 和功能映射。
-- `robot/modules/RcUpdate.*` 以 100 Hz 轮询 `input_rc`，归一化通道并发布上层手动控制数据。连续稳定收到三帧后，控制数据才标记为有效。
+- `robot/modules/rc_update/RcConfig.*` 保存 16 路 MIN、MAX、TRIM、DEADZONE、REV 和功能映射。
+- `robot/modules/rc_update/RcUpdate.*` 通过消息回调读取 `input_rc`，并用10ms定时兜底检查超时，归一化通道并发布上层手动控制数据。连续稳定收到三帧后，控制数据才标记为有效。
 
 默认功能映射为 CH1=roll、CH2=pitch、CH3=throttle、CH4=yaw，CH5 到 CH16 映射为十二个开关。该映射只是一套便于首次验收的默认值，最终映射应在参数系统完成后由参数加载。
 

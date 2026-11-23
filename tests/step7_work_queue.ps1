@@ -11,17 +11,18 @@ set -e
 root="$(cygpath -u "$CBOARD_WQ_TEST_ROOT")"
 cd "$root"
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root" \
-  tests/work_queue_test.cpp robot/work_queue/WorkQueue.cpp \
+  tests/work_queue_test.cpp robot/work_queue/WorkItem.cpp robot/work_queue/ScheduledWorkItem.cpp robot/work_queue/WorkQueue.cpp \
+  robot/work_queue/WorkQueueManager.cpp robot/work_queue/WorkQueueConfigurations.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
   -o build/tests/work_queue_test.exe
 ./build/tests/work_queue_test.exe
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
-  tests/work_queue_modules_test.cpp robot/modules/RcUpdate.cpp \
-  robot/modules/RcConfig.cpp robot/modules/Command.cpp \
-  robot/modules/Failsafe.cpp robot/modules/RobotControl.cpp \
-  robot/modules/ControlAllocator.cpp robot/control/Allocation.cpp \
+  tests/work_queue_modules_test.cpp robot/modules/rc_update/RcUpdate.cpp \
+  robot/modules/rc_update/RcConfig.cpp robot/modules/command/Command.cpp \
+  robot/modules/failsafe/Failsafe.cpp robot/modules/robot_control/RobotControl.cpp \
+  robot/modules/control_allocator/ControlAllocator.cpp robot/control/Allocation.cpp \
   robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
-  robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp \
+  robot/work_queue/WorkItem.cpp robot/work_queue/ScheduledWorkItem.cpp robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp robot/work_queue/WorkQueueConfigurations.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
   robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \

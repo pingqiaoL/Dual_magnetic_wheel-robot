@@ -4,7 +4,7 @@
  */
 
 #include "robot/drivers/rc/sbus.h"
-#include "robot/modules/RcConfig.hpp"
+#include "robot/modules/rc_update/RcConfig.hpp"
 #include "msg/ManualControlSwitches.hpp"
 
 #include <assert.h>

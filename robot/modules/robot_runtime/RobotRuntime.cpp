@@ -9,16 +9,16 @@
 #undef main
 #endif
 
-#include "robot/modules/RobotRuntime.hpp"
+#include "robot/modules/robot_runtime/RobotRuntime.hpp"
 
-#include "robot/modules/Command.hpp"
-#include "robot/modules/ControlAllocator.hpp"
-#include "robot/modules/Failsafe.hpp"
-#include "robot/modules/RcUpdate.hpp"
-#include "robot/modules/RobotControl.hpp"
-#include "robot/modules/SbusInput.hpp"
+#include "robot/modules/command/Command.hpp"
+#include "robot/modules/control_allocator/ControlAllocator.hpp"
+#include "robot/modules/failsafe/Failsafe.hpp"
+#include "robot/modules/rc_update/RcUpdate.hpp"
+#include "robot/modules/robot_control/RobotControl.hpp"
+#include "robot/modules/sbus_input/SbusInput.hpp"
 #include "robot/os/Clock.hpp"
-#include "robot/output/CanOutput.hpp"
+#include "robot/output/can_output/CanOutput.hpp"
 #include "robot/params/ParamSystem.hpp"
 #include "robot/work_queue/WorkQueueManager.hpp"
 
@@ -35,7 +35,7 @@ RobotRuntime::RobotRuntime()
 {
 }
 
-/** 创建独立 pthread，并由 ModuleBase::run_trampoline 接管线程入口。 */
+/** 创建独立任务，并由 ModuleBase::run_trampoline 接管线程入口。 */
 int RobotRuntime::task_spawn(int argc, char *argv[])
 {
   const int taskId = os::Task::spawn("robot_core", 100, 8192,
@@ -60,8 +60,6 @@ RobotRuntime *RobotRuntime::instantiate(int argc, char *argv[])
       fprintf(stderr, "parameter system initialization failed\n");
       return nullptr;
     }
-  if (!robot_wq::Initialize())
-    { fprintf(stderr, "work queue initialization failed\n"); return nullptr; }
   return new RobotRuntime();
 }
 

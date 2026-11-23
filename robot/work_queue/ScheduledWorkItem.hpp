@@ -7,7 +7,7 @@ class ScheduledWorkItem : public WorkItem
 {
 public:
   explicit ScheduledWorkItem(WorkQueue &queue) : WorkItem(queue) {}
-  bool InitSchedule(uint64_t minimumIntervalUs);
+  ScheduledWorkItem(const char *name, const wq_config_t &config) : WorkItem(name, config) {}
   void ScheduleDelayed(uint64_t delayUs);
   void ScheduleOnInterval(uint64_t intervalUs);
   /** Cancel pending/timed work, keeping the item registered for rescheduling. */

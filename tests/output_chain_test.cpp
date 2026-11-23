@@ -1,7 +1,7 @@
 /** @file output_chain_test.cpp
  * @brief 验证逻辑执行器到物理槽位的映射、SA互锁和硬故障处理。
  */
-#include "robot/modules/Command.hpp"
+#include "robot/modules/command/Command.hpp"
 #include "robot/output/MixingOutput.hpp"
 #include "robot/control/Allocation.hpp"
 #include "robot/control/ActuatorEffectivenessDualMagneticWheel.hpp"

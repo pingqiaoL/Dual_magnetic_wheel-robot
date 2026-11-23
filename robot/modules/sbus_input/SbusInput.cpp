@@ -9,7 +9,7 @@
 #undef main
 #endif
 
-#include "robot/modules/SbusInput.hpp"
+#include "robot/modules/sbus_input/SbusInput.hpp"
 
 #include "robot/os/Clock.hpp"
 

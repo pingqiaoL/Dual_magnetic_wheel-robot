@@ -5,7 +5,7 @@
 #undef main
 #endif
 
-#include "robot/modules/RobotControl.hpp"
+#include "robot/modules/robot_control/RobotControl.hpp"
 #include "robot/os/Clock.hpp"
 
 #include <math.h>
@@ -15,8 +15,8 @@ static constexpr uint64_t FailsafeStatusTimeoutUs = 500000ULL;
 
 /** 建立输入订阅、目标发布和安全策略参数。 */
 RobotControl::RobotControl()
-  : WorkQueueModuleBase<RobotControl>(robot_wq::ControlQueue(), 20000),
-    ModuleParams(nullptr), _manualSubscription(manualControlTopic(), *this),
+  : ModuleParams(nullptr),
+    ScheduledWorkItem("robot_control", robot_wq::wq_configurations::control), _manualSubscription(manualControlTopic(), *this),
     _failsafeSubscription(failsafeStatusTopic(), *this),
     _parameterSubscription(parameterUpdateTopic(), *this),
     _setpointPublication(robotControlSetpointTopic()),
@@ -30,14 +30,44 @@ RobotControl::RobotControl()
   (void)refreshPolicy();
 }
 
+/** 析构前解绑工作项，保证成员仍有效时完成停止。 */
+RobotControl::~RobotControl()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  // Normal NSH stop has already detached. Directly-owned instances must also
+  // finish execution before their members are destroyed.
+  while (!StopAndWait()) {}
+}
 
-
-/** 创建目标生成对象。 */
-RobotControl *RobotControl::instantiate(int argc, char *argv[])
+/** 模块显式启动入口：创建实例、保存状态并调用init。 */
+int RobotControl::task_spawn(int argc, char *argv[])
 {
   (void)argc;
   (void)argv;
-  return new RobotControl();
+  RobotControl *instance = new RobotControl();
+  if (instance == nullptr)
+    {
+      return -1;
+    }
+
+  __atomic_store_n(&_object, instance, __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, WorkQueueTaskId, __ATOMIC_RELEASE);
+  if (instance->init())
+    {
+      return 0;
+    }
+
+  // A failed init must release callbacks and wait before deleting the object.
+  if (!instance->stop_work_queue())
+    {
+      fprintf(stderr, "initialization cleanup timed out; retry stop\n");
+      return -1;
+    }
+  delete instance;
+  __atomic_store_n(&_object, static_cast<RobotControl *>(nullptr), __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+  return -1;
 }
 
 /** 输出生命周期命令。 */
@@ -156,11 +186,19 @@ int RobotControl::print_status()
 }
 
 /** 周期发布目标；停止后立即发布无效的安全目标。 */
-bool RobotControl::initWorkQueue()
+bool RobotControl::init()
 {
-  return _manualSubscription.registerCallback() &&
-         _failsafeSubscription.registerCallback() &&
-         _parameterSubscription.registerCallback();
+  if (!initialized()) { return false; }
+  // Explicitly separate message rate limit from the periodic backup deadline.
+  SetMinimumInterval(MinimumIntervalUs);
+  if (!(_manualSubscription.registerCallback() &&
+        _failsafeSubscription.registerCallback() &&
+        _parameterSubscription.registerCallback()))
+    { unregisterCallbacks(); return false; }
+  ActivateSchedule();
+  ScheduleDelayed(BackupIntervalUs);
+  ScheduleNow();
+  return true;
 }
 
 void RobotControl::unregisterCallbacks()
@@ -172,10 +210,21 @@ void RobotControl::unregisterCallbacks()
 
 void RobotControl::Run()
 {
+  // Refresh the backup independently of whether a new message triggered Run.
+  ScheduleDelayed(BackupIntervalUs);
   update();
 }
 
-void RobotControl::onWorkQueueStopped()
+bool RobotControl::stop_work_queue()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  if (!StopAndWait()) { return false; }
+  publishStoppedState();
+  return true;
+}
+
+void RobotControl::publishStoppedState()
 {
   RobotControlSetpoint stopped{};
   stopped.timestamp = os::Clock::nowMicroseconds();

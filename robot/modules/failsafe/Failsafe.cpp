@@ -4,15 +4,15 @@
 #ifdef main
 #undef main
 #endif
-#include "robot/modules/Failsafe.hpp"
+#include "robot/modules/failsafe/Failsafe.hpp"
 #include "robot/os/Clock.hpp"
 #include <math.h>
 #include <stdio.h>
 
 /** 建立手动输入订阅和Failsafe状态发布。 */
 Failsafe::Failsafe()
-  : WorkQueueModuleBase<Failsafe>(robot_wq::ControlQueue(), 20000),
-    ModuleParams(nullptr), _manualSubscription(manualControlTopic(), *this),
+  : ModuleParams(nullptr),
+    ScheduledWorkItem("failsafe", robot_wq::wq_configurations::control), _manualSubscription(manualControlTopic(), *this),
     _parameterSubscription(parameterUpdateTopic(), *this),
     _statusPublication(failsafeStatusTopic()),
     _paramRcTimeout(this, "FS_RC_TMO", 0.5f)
@@ -21,14 +21,44 @@ Failsafe::Failsafe()
   (void)refreshPolicy();
 }
 
+/** 析构前解绑工作项，保证成员仍有效时完成停止。 */
+Failsafe::~Failsafe()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  // Normal NSH stop has already detached. Directly-owned instances must also
+  // finish execution before their members are destroyed.
+  while (!StopAndWait()) {}
+}
 
-
-/** 创建Failsafe对象。 */
-Failsafe *Failsafe::instantiate(int argc, char *argv[])
+/** 模块显式启动入口：创建实例、保存状态并调用init。 */
+int Failsafe::task_spawn(int argc, char *argv[])
 {
   (void)argc;
   (void)argv;
-  return new Failsafe();
+  Failsafe *instance = new Failsafe();
+  if (instance == nullptr)
+    {
+      return -1;
+    }
+
+  __atomic_store_n(&_object, instance, __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, WorkQueueTaskId, __ATOMIC_RELEASE);
+  if (instance->init())
+    {
+      return 0;
+    }
+
+  // A failed init must release callbacks and wait before deleting the object.
+  if (!instance->stop_work_queue())
+    {
+      fprintf(stderr, "initialization cleanup timed out; retry stop\n");
+      return -1;
+    }
+  delete instance;
+  __atomic_store_n(&_object, static_cast<Failsafe *>(nullptr), __ATOMIC_RELEASE);
+  __atomic_store_n(&_taskId, -1, __ATOMIC_RELEASE);
+  return -1;
 }
 
 /** 输出生命周期命令。 */
@@ -92,10 +122,18 @@ int Failsafe::print_status()
 }
 
 /** 周期发布故障标志；停止后发布active使目标生成器立即进入安全状态。 */
-bool Failsafe::initWorkQueue()
+bool Failsafe::init()
 {
-  return _manualSubscription.registerCallback() &&
-         _parameterSubscription.registerCallback();
+  if (!initialized()) { return false; }
+  // Explicitly separate message rate limit from the periodic backup deadline.
+  SetMinimumInterval(MinimumIntervalUs);
+  if (!(_manualSubscription.registerCallback() &&
+        _parameterSubscription.registerCallback()))
+    { unregisterCallbacks(); return false; }
+  ActivateSchedule();
+  ScheduleDelayed(BackupIntervalUs);
+  ScheduleNow();
+  return true;
 }
 
 void Failsafe::unregisterCallbacks()
@@ -106,10 +144,21 @@ void Failsafe::unregisterCallbacks()
 
 void Failsafe::Run()
 {
+  // Refresh the backup independently of whether a new message triggered Run.
+  ScheduleDelayed(BackupIntervalUs);
   update();
 }
 
-void Failsafe::onWorkQueueStopped()
+bool Failsafe::stop_work_queue()
+{
+  unregisterCallbacks();
+  ScheduleClear();
+  if (!StopAndWait()) { return false; }
+  publishStoppedState();
+  return true;
+}
+
+void Failsafe::publishStoppedState()
 {
   FailsafeStatus stopped{};
   stopped.timestamp = os::Clock::nowMicroseconds();

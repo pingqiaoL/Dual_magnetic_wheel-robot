@@ -22,7 +22,8 @@ CXXSRCS += FlashParamStorage.cpp ParamSystem.cpp
 CXXSRCS += MixingOutput.cpp Allocation.cpp
 CXXSRCS += ActuatorEffectivenessDualMagneticWheel.cpp
 CXXSRCS += DamiaoProtocol.cpp
-CXXSRCS += WorkQueue.cpp WorkQueueManager.cpp
+CXXSRCS += WorkItem.cpp ScheduledWorkItem.cpp WorkQueue.cpp
+CXXSRCS += WorkQueueManager.cpp WorkQueueConfigurations.cpp
 MAINSRC = RobotRuntime.cpp SbusInput.cpp RcUpdate.cpp param_main.cpp
 MAINSRC += ControlAllocator.cpp CanOutput.cpp Command.cpp
 MAINSRC += Failsafe.cpp
@@ -42,6 +43,11 @@ CXXFLAGS += -Dfailsafe_main=$(subst ",,$(CONFIG_CBOARD_FAILSAFE_PROGNAME))_main
 CXXFLAGS += -Drobot_control_main=$(subst ",,$(CONFIG_CBOARD_ROBOT_CONTROL_PROGNAME))_main
 VPATH += :robot/common:robot/os:robot/orb:robot/drivers/rc:robot/modules:robot/params
 VPATH += :robot/work_queue
+VPATH += :robot/modules/rc_update:robot/modules/command
+VPATH += :robot/modules/failsafe:robot/modules/robot_control
+VPATH += :robot/modules/control_allocator
+VPATH += :robot/modules/robot_runtime:robot/modules/sbus_input
+VPATH += :robot/output/can_output
 VPATH += :robot/configuration:robot/control:robot/output:protocol/can
 
 include $(APPDIR)/Application.mk
