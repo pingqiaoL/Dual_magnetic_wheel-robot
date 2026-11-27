@@ -53,6 +53,14 @@ config CBOARD_ROBOT_CONTROL_PROGNAME
 	string "Robot setpoint generator command name"
 	default "robot_control"
 
+config CBOARD_THICKNESS_CONTROL_PROGNAME
+	string "Thickness control command name"
+	default "thickness_control"
+
+config CBOARD_LINK_PROGNAME
+	string "Orin serial link command name"
+	default "cboard_link"
+
 endif
 
 endmenu

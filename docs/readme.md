@@ -61,7 +61,7 @@
 
 以下内容**尚未实现或未接入**：升降机构的接触/压力闭环、测厚就绪状态对 Orin 的发布、Orin—STM32 的 XRCE-DDS 通信、PWM 执行器硬件后端、CAN2 输出后端、IMU 与电池监控业务。
 
-`USART1` 已在板级配置中启用，但“有串口设备”不等于“已有上位机通信协议”。历史硬件表中的 MAVLink 为预留描述，当前源码没有可运行的下位机 MAVLink 或 XRCE-DDS 模块。测厚仪和摄像头仍由机载 Orin 处理。
+`cboard_link` 通过 USART1 与 Orin 同步测厚就绪状态。推杆控制发布 `measurementReady`，串口任务在状态变化时发送，并响应 Orin 的状态查询。测厚仪采集和摄像头处理运行在 Orin。
 
 ## 3. 软件分层与数据流
 
@@ -125,7 +125,9 @@ S1 = CA_YAW_R × steering    后转向
 | `wq_safety` | `RcUpdate`、`Command` | 110 / 8192 B，共用队列栈 | 消息触发 + 周期兜底 |
 | `wq_control` | `Failsafe`、`RobotControl`、`ControlAllocator` | 105 / 8192 B，共用队列栈 | 消息触发 + 周期兜底 |
 
-`RcUpdate` 最小间隔与兜底间隔各为 10 ms，其余队列模块各为 20 ms。消息回调请求调度，实际 `Run()` 由队列串行执行；没有新消息时兜底仍可检测超时。上述间隔不是硬实时截止时间保证。
+`RcUpdate` 最小间隔与兜底间隔各为 10 ms，`Command` 和 `wq_control` 的模块各为 20 ms。消息回调请求调度，实际 `Run()` 由队列串行执行。没有新消息时，周期任务仍可检测超时。这些间隔受系统节拍和调度延迟影响。
+
+每条队列通过信号量等候新任务或最近截止时间。待处理的唤醒通知最多保留一个，避免空闲时因通知积累持续抢占 NSH。当前 NuttX 系统节拍为 10 ms，实际检测周期和停车延迟以台架测量为准。
 
 模块入口统一为：NSH 命令 → `ModuleBase::main()` → 模块 `task_spawn()`。队列模块构造时选择队列，`init()` 注册回调与调度；独立任务采用 `instantiate()` 与 `run()`。`param` 是一次性命令，不是常驻任务。
 
@@ -189,7 +191,7 @@ _code/
 | NSH 调试控制台 | USART6 TX=PG14、RX=PG9 | 115200、8N1；USB-TTL 接入 PC |
 | MK32 SBUS | USART3 RX=PC11，经 CBoard DBUS 反相电路 | `/dev/ttyS2`，100000、8E2 |
 | 电机 CAN | CAN1 TX=PD1、RX=PD0 | `/dev/can0`，1 Mbit/s；板端 CAN 接头 1=CANL、2=CANH |
-| 上位机通信预留 | USART1 TX=PA9、RX=PB7 | 配置 115200；无已接入的通信业务模块 |
+| Orin 测厚就绪通信 | USART1 TX=PA9、RX=PB7，`/dev/ttyS1` | 115200、8N1，`cboard_link` |
 | LED / 按键 | PH10、PH11、PH12 / PA0 | BSP；按键低有效 |
 | PWM / CAN2 / IMU / 电池采样 | 见硬件资源表 | 不属于本版已完成控制后端 |
 
@@ -272,21 +274,21 @@ git status --short
 Windows PowerShell，在工程根目录执行：
 
 ```powershell
-# 默认烧录 artifacts/nuttx.hex，SWD 速度 50 kHz
+# 默认使用 HID，经 400 kHz SWD 烧录 artifacts/nuttx.hex
 .\tools\flash_wireless.ps1
 
 # 显式指定固件与速度
-.\tools\flash_wireless.ps1 -Firmware .\artifacts\nuttx.hex -AdapterKhz 50
+.\tools\flash_wireless.ps1 -Firmware .\artifacts\nuttx.hex -AdapterKhz 400
 ```
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
 | `-Firmware` | `artifacts\nuttx.hex` | 相对工程根目录或绝对固件路径 |
-| `-AdapterKhz` | `50` | SWD 时钟，允许 10～1000 kHz；这是调试链路速度，不是无线电速率 |
+| `-AdapterKhz` | `400` | SWD 时钟，允许 10～1000 kHz |
 
 脚本在 **`C:\ST`** 下查找 STM32CubeIDE 的 `openocd.exe` 与 `st_scripts/interface/cmsis-dap.cfg`，配合 `target/stm32f4x.cfg`。其他安装目录即使能编译，也不保证烧录脚本能找到 OpenOCD。
 
-实际操作顺序：选择 SWD → 初始化并暂停 MCU → `flash write_image erase` → `verify_image` → `reset run` → 退出。只有出现 `[PASS] Wireless flash, verification and reset completed` 且无错误，才可认定这次烧录校验完成。脚本没有自动编译，务必先确认 HEX 对应本次源码。
+脚本通过 HID 连接调试器，执行 `reset halt` 后按镜像擦写，再校验并重启 MCU。出现 `[PASS] Wireless flash, verification and reset completed` 表示烧录、校验和复位均已完成。源码修改后先单独编译生成新的 HEX。
 
 烧录期间固件会暂停和复位，先让执行器处于失能状态。本工程固件区域与参数区域分离；不要额外执行整片擦除来代替脚本中的按镜像烧写，否则保存参数也会丢失。
 
@@ -322,10 +324,12 @@ NuttX / NSH → ROMFS /etc/init.d/rcS
   6. robot_control start
   7. control_allocator start
   8. can_output start -d /dev/can0
-  9. command start
+  9. thickness_control start           测厚推杆控制，等待 SA 解锁
+ 10. cboard_link start                  上位机就绪状态同步
+ 11. command start
 ```
 
-脚本继续尝试启动后续模块，`RobotRuntime` 汇总必需模块状态；正常就绪提示为 `CBoard initialization complete`。`robot ready` 是诊断命令，不能代替缺失模块的启动。`robot stop` 停的是运行时模块，不要把它视为停止所有电机任务的一键指令。
+`RobotRuntime` 检查包括 `thickness_control` 在内的必需模块，启动成功后显示 `CBoard initialization complete`。若启动异常，执行 `robot ready` 查看缺失模块。测厚控制上电进入 `waiting_for_arm`，收到有效的 SA 解锁后才开始收回复位。使用 `thickness_control status` 查看推杆状态和测厚就绪。`robot stop` 只停止运行时模块。
 
 ### 8.3 常用诊断命令
 

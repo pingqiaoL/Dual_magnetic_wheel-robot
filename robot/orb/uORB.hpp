@@ -45,16 +45,16 @@ public:
   /** 发布一份消息，并增加 generation 通知所有订阅者。 */
   bool publish(const Message &message)
   {
-      {
+      { //添加锁作用域
         os::LockGuard guard(_mutex);
         if (!guard.locked()) { return false; }
-        _message = message;
+        _message = message;//当前只保存最新数据
         ++_generation;
         _advertised = true;
       }
     // Separate callback lock: data lock is already released. Unregister waits
     // for these short notifications, so callback objects cannot be freed early.
-    os::LockGuard callbacks(_callbackMutex);
+    os::LockGuard callbacks(_callbackMutex); //加锁
     if (!callbacks.locked()) { return false; }
     for (Callback *callback : _callbacks)
       { if (callback != nullptr) { callback->onTopicUpdate(); } }
@@ -107,7 +107,7 @@ public:
   }
 
 private:
-  os::Mutex _callbackMutex;
+  os::Mutex _callbackMutex; //回调数组锁
   Callback *_callbacks[8]{};
   /** 保护消息、generation 和 advertised 状态。 */
   os::Mutex _mutex;

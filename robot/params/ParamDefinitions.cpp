@@ -54,6 +54,12 @@ void buildParamDefinitions(ParamManager &manager)
   PARAM_DEFINE_FLOAT(FS_STR_VAL, 0.0f);
   PARAM_DEFINE_INT32(OUT_FAIL_ACT, 2);
 
+  PARAM_DEFINE_INT32(LIFT_REV, 1);
+  PARAM_DEFINE_FLOAT(LIFT_TIMEOUT, 10.0f);
+  PARAM_DEFINE_FLOAT(LIFT_RESET_TIME, 10.0f);
+  PARAM_DEFINE_INT32(LIFT_C4_STABLE, 50);
+  PARAM_DEFINE_INT32(LIFT_SF_SW, 6);
+
   for (unsigned index = 0; index < 2; ++index)
     {
       snprintf(name, sizeof(name), "CAN_M%u_FUNC", index);

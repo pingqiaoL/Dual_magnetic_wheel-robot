@@ -1,9 +1,9 @@
-# 使用正点原子高速无线调试器的 CMSIS-DAP 接口烧录并校验 NuttX 固件。
+﻿# 使用正点原子高速无线调试器的 CMSIS-DAP 接口烧录并校验 NuttX 固件。
 [CmdletBinding()]
 param(
     [string]$Firmware = 'artifacts\nuttx.hex',
     [ValidateRange(10, 1000)]
-    [int]$AdapterKhz = 50
+    [int]$AdapterKhz = 400
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,10 +50,15 @@ if ($resolvedFirmware.StartsWith($projectPrefix, [StringComparison]::OrdinalIgno
 }
 
 $openOcdFirmware = $openOcdFirmware.Replace('\', '/')
-$adapterConfig = "transport select swd; set CLOCK_FREQ $AdapterKhz; " +
-    'set CONNECT_UNDER_RESET 0; reset_config none'
-$flashCommands = "init; halt; flash write_image erase {$openOcdFirmware}; " +
-    "verify_image {$openOcdFirmware}; reset run; shutdown"
+# 无线调试器实测使用 HID。写入前复位并暂停目标，清理上次失败留下的状态。
+$adapterConfig = 'gdb_port disabled; tcl_port disabled; telnet_port disabled; ' +
+    "transport select swd; set CLOCK_FREQ $AdapterKhz; set CONNECT_UNDER_RESET 0; " +
+    'reset_config none; cmsis_dap_backend hid'
+$startMarker = 'CBOARD_FLASH_BEGIN'
+$doneMarker = 'CBOARD_FLASH_VERIFIED_AND_RESET'
+$flashCommands = "init; reset halt; flash probe 0; echo $startMarker; " +
+    "flash write_image erase {$openOcdFirmware}; " +
+    "verify_image {$openOcdFirmware}; reset run; echo $doneMarker; shutdown"
 
 Push-Location $projectRoot
 try {
@@ -76,8 +81,14 @@ try {
         $ErrorActionPreference = $savedErrorActionPreference
     }
 
+    # 旧固件锁死可能由 reset halt 恢复。只忽略擦写开始前的这一条诊断。
+    $startupLockup = $output.IndexOf('Error: [stm32f4x.cpu] clearing lockup after double fault')
+    if ($startupLockup -ge 0 -and $startupLockup -lt $output.IndexOf($startMarker)) {
+        $output.RemoveAt($startupLockup)
+    }
     $errorText = $output -join [Environment]::NewLine
-    if ($exitCode -ne 0 -or $errorText -match '(?m)^Error:|Unable to') {
+    if ($exitCode -ne 0 -or $errorText -match '(?m)^Error:|Unable to' -or
+        $output -cnotcontains $doneMarker) {
         throw "Wireless flash failed. OpenOCD exit code: $exitCode"
     }
 } finally {

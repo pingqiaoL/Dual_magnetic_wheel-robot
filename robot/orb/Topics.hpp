@@ -16,6 +16,7 @@
 #include "msg/ParameterUpdate.hpp"
 #include "msg/RcChannels.hpp"
 #include "msg/RobotControlSetpoint.hpp"
+#include "msg/ThicknessControlStatus.hpp"
 #include "robot/orb/uORB.hpp"
 
 /** 返回原始遥控输入 topic：input_rc。 */
@@ -50,3 +51,6 @@ uorb::Topic<ActuatorStatus> &actuatorStatusTopic();
 
 /** 返回command发布的统一执行器安全状态topic。 */
 uorb::Topic<ActuatorArmed> &actuatorArmedTopic();
+
+/** 返回测厚控制状态 topic：thickness_control_status。 */
+uorb::Topic<ThicknessControlStatus> &thicknessControlStatusTopic();

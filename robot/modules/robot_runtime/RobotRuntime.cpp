@@ -8,15 +8,18 @@
 #ifdef main
 #undef main
 #endif
-
+#ifdef CBOARD_NUTTX
+#include <nuttx/version.h>
+#endif
 #include "robot/modules/robot_runtime/RobotRuntime.hpp"
-
+#include "robot/common/FirmwareVersion.hpp"
 #include "robot/modules/command/Command.hpp"
 #include "robot/modules/control_allocator/ControlAllocator.hpp"
 #include "robot/modules/failsafe/Failsafe.hpp"
 #include "robot/modules/rc_update/RcUpdate.hpp"
 #include "robot/modules/robot_control/RobotControl.hpp"
 #include "robot/modules/sbus_input/SbusInput.hpp"
+#include "robot/modules/thickness_control/ThicknessControl.hpp"
 #include "robot/os/Clock.hpp"
 #include "robot/output/can_output/CanOutput.hpp"
 #include "robot/params/ParamSystem.hpp"
@@ -38,6 +41,7 @@ RobotRuntime::RobotRuntime()
 /** 创建独立任务，并由 ModuleBase::run_trampoline 接管线程入口。 */
 int RobotRuntime::task_spawn(int argc, char *argv[])
 {
+  //创建任务来执行实例的创建
   const int taskId = os::Task::spawn("robot_core", 100, 8192,
                                      &run_trampoline, argc, argv);
   if (taskId < 0)
@@ -71,7 +75,7 @@ int RobotRuntime::print_usage(const char *reason)
       fprintf(stderr, "%s\n", reason);
     }
 
-  printf("usage: robot {start|stop|status|ready}\n");
+  printf("usage: robot {start|stop|status|ready|version}\n");
   return reason == nullptr ? 0 : -1;
 }
 
@@ -114,12 +118,29 @@ bool RobotRuntime::requiredModulesRunning(bool report)
       if (report) { fprintf(stderr, "INITIALIZATION ERROR: command is not running\n"); }
       ready = false;
     }
+  if (!ThicknessControl::is_running())
+    {
+      if (report) { fprintf(stderr, "INITIALIZATION ERROR: thickness_control is not running\n"); }
+      ready = false;
+    }
   return ready;
 }
 
 /** 提供手动ready诊断；正常启动不依赖脚本调用该命令。 */
 int RobotRuntime::custom_command(int argc, char *argv[])
 {
+  //输出固件版本号
+    if (argc == 1 && strcmp(argv[0], "version") == 0)
+    {
+        printf("Firmware: %s\n", ROBOT_FIRMWARE_VERSION);
+
+        #ifdef CBOARD_NUTTX
+                printf("NuttX: %s\n", CONFIG_VERSION_STRING);
+        #endif
+
+        return 0;
+    }
+
   if (argc != 1 || strcmp(argv[0], "ready") != 0)
     { return print_usage("unknown command"); }
 

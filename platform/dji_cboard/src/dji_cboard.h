@@ -21,6 +21,13 @@
 #define GPIO_BTN_USER   (GPIO_INPUT | GPIO_PULLUP | GPIO_EXTI | \
                          GPIO_PORTA | GPIO_PIN0)
 
+/* J16 PWM signals used as GPIO: C2=PE11, C3=PE13, C5=PC6. */
+#define GPIO_LIFT_IN1   (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
+                         GPIO_OUTPUT_CLEAR | GPIO_PORTE | GPIO_PIN11)
+#define GPIO_LIFT_IN2   (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHz | \
+                         GPIO_OUTPUT_CLEAR | GPIO_PORTE | GPIO_PIN13)
+#define GPIO_LIFT_WORK  (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTC | GPIO_PIN6)
+
 #ifdef CONFIG_ARCH_LEDS
 void stm32_led_initialize(void);
 #endif

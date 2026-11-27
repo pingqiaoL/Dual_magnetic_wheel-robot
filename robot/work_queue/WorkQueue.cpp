@@ -14,12 +14,9 @@ WorkQueue::WorkQueue(const char *name, int priority, size_t stackSize)
   : _name(name), _priority(priority), _stackSize(stackSize)
 {
   pthread_mutex_init(&_mutex, nullptr);
-  pthread_condattr_t attributes;
-  pthread_condattr_init(&attributes);
-  if (pthread_condattr_setclock(&attributes, CLOCK_MONOTONIC) == 0)
-    { _conditionClock = CLOCK_MONOTONIC; }
-  pthread_cond_init(&_condition, &attributes);
-  pthread_condattr_destroy(&attributes);
+#ifdef CBOARD_NUTTX
+  pthread_cond_init(&_exitCondition, nullptr);
+#endif
 }
 
 WorkQueue::~WorkQueue()
@@ -27,7 +24,9 @@ WorkQueue::~WorkQueue()
   const bool stopped = Shutdown();
   assert(stopped);
   (void)stopped;
-  pthread_cond_destroy(&_condition);
+#ifdef CBOARD_NUTTX
+  pthread_cond_destroy(&_exitCondition);
+#endif
   pthread_mutex_destroy(&_mutex);
 }
 
@@ -64,9 +63,9 @@ bool WorkQueue::Shutdown()
   if (_items != nullptr) { pthread_mutex_unlock(&_mutex); return false; }
   if (!_started) { pthread_mutex_unlock(&_mutex); return true; }
   _exit = true;
-  pthread_cond_broadcast(&_condition);
+  WakeWorker();
 #ifdef CBOARD_NUTTX
-  while (!_workerExited) { pthread_cond_wait(&_condition, &_mutex); }
+  while (!_workerExited) { pthread_cond_wait(&_exitCondition, &_mutex); }
   _started = false;
   _taskId = -1;
   pthread_mutex_unlock(&_mutex);
@@ -119,14 +118,17 @@ bool WorkQueue::Detach(WorkItem &item, uint32_t timeoutMs)
   item._stopping = true;
   item._pending = false;
   item._period = 0;
-  pthread_cond_broadcast(&_condition);
+  WakeWorker();
   const uint64_t deadline = os::Clock::nowMicroseconds() +
                             static_cast<uint64_t>(timeoutMs) * 1000ULL;
   while (item._running)
     {
       if (os::Clock::nowMicroseconds() >= deadline)
         { pthread_mutex_unlock(&_mutex); return false; }
-      WaitUntil(deadline);
+      // Release the lock so the active Run can finish. Keep the original stop deadline.
+      pthread_mutex_unlock(&_mutex);
+      os::Clock::sleepMilliseconds(1);
+      pthread_mutex_lock(&_mutex);
     }
   WorkItem **cursor = &_items;
   while (*cursor != nullptr && *cursor != &item) { cursor = &(*cursor)->_next; }
@@ -148,7 +150,7 @@ void WorkQueue::SetMinimumInterval(WorkItem &item, uint64_t intervalUs)
 {
   pthread_mutex_lock(&_mutex);
   item._minimumInterval = intervalUs;
-  pthread_cond_broadcast(&_condition);
+  WakeWorker();
   pthread_mutex_unlock(&_mutex);
 }
 
@@ -162,7 +164,7 @@ void WorkQueue::Schedule(WorkItem &item, uint64_t delayUs)
       if (item._lastStart != 0 && deadline < earliest) { deadline = earliest; }
       if (!item._pending || deadline < item._deadline) { item._deadline = deadline; }
       item._pending = true;
-      pthread_cond_broadcast(&_condition);
+      WakeWorker();
     }
   pthread_mutex_unlock(&_mutex);
 }
@@ -175,7 +177,7 @@ void WorkQueue::SetInterval(WorkItem &item, uint64_t intervalUs)
       item._enabled = true;
       item._period = intervalUs;
       item._nextPeriodic = os::Clock::nowMicroseconds() + intervalUs;
-      pthread_cond_broadcast(&_condition);
+      WakeWorker();
     }
   pthread_mutex_unlock(&_mutex);
 }
@@ -185,7 +187,7 @@ void WorkQueue::Clear(WorkItem &item)
   pthread_mutex_lock(&_mutex);
   item._pending = false;
   item._period = 0;
-  pthread_cond_broadcast(&_condition);
+  WakeWorker();
   pthread_mutex_unlock(&_mutex);
 }
 
@@ -198,26 +200,19 @@ QueueStatus WorkQueue::Status()
   return status;
 }
 
-void WorkQueue::WaitUntil(uint64_t monotonicDeadline)
+void WorkQueue::WakeWorker()
 {
-  const uint64_t now = os::Clock::nowMicroseconds();
-  if (monotonicDeadline <= now) { return; }
-  struct timespec deadline{};
-  if (_conditionClock == CLOCK_MONOTONIC)
-    {
-      deadline.tv_sec = monotonicDeadline / 1000000ULL;
-      deadline.tv_nsec = (monotonicDeadline % 1000000ULL) * 1000ULL;
-    }
-  else
-    {
-      clock_gettime(CLOCK_REALTIME, &deadline);
-      const uint64_t delta = monotonicDeadline - now;
-      deadline.tv_sec += delta / 1000000ULL;
-      deadline.tv_nsec += (delta % 1000000ULL) * 1000ULL;
-      deadline.tv_sec += deadline.tv_nsec / 1000000000L;
-      deadline.tv_nsec %= 1000000000L;
-    }
-  (void)pthread_cond_timedwait(&_condition, &_mutex, &deadline);
+  if (!_wakePending && _wake.post()) { _wakePending = true; }
+}
+
+void WorkQueue::WaitForWork(uint64_t monotonicDeadline)
+{
+  // One token is enough to request a rescan. The schedule stays under _mutex.
+  pthread_mutex_unlock(&_mutex);
+  const bool notified = monotonicDeadline == UINT64_MAX
+                          ? _wake.wait() : _wake.waitUntil(monotonicDeadline);
+  pthread_mutex_lock(&_mutex);
+  if (notified) { _wakePending = false; }
 }
 
 void *WorkQueue::Entry(void *argument)
@@ -260,8 +255,7 @@ void WorkQueue::Loop()
         }
       if (selected == nullptr)
         {
-          if (nextWake == UINT64_MAX) { pthread_cond_wait(&_condition, &_mutex); }
-          else { WaitUntil(nextWake); }
+          WaitForWork(nextWake);
           continue;
         }
       selected->_pending = false;
@@ -275,10 +269,11 @@ void WorkQueue::Loop()
       selected->_running = false;
       ++_runs;
       if (elapsed > _maxRunUs) { _maxRunUs = elapsed; }
-      pthread_cond_broadcast(&_condition);
     }
   _workerExited = true;
-  pthread_cond_broadcast(&_condition);
+#ifdef CBOARD_NUTTX
+  pthread_cond_broadcast(&_exitCondition);
+#endif
   pthread_mutex_unlock(&_mutex);
 }
 }

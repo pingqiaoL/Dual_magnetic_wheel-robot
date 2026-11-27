@@ -97,7 +97,7 @@ public:
         ++argv;
       }
 
-    T *object = T::instantiate(argc, argv);
+    T *object = T::instantiate(argc, argv); //创建对应模块的实例
     __atomic_store_n(&_object, object, __ATOMIC_RELEASE);
 
     int result = 0;

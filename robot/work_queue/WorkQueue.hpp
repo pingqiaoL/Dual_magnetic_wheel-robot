@@ -1,8 +1,8 @@
 #pragma once
+#include "robot/os/Semaphore.hpp"
 #include "robot/work_queue/WorkItem.hpp"
 #include <pthread.h>
 #include <stddef.h>
-#include <time.h>
 
 namespace robot_wq
 {
@@ -15,7 +15,7 @@ struct QueueStatus
   uint64_t maxRunUs;
 };
 
-/** Each queue has one worker. The worker sleeps on a condition variable. */
+/** Each queue has one worker and a coalesced notification for schedule changes. */
 class WorkQueue
 {
 public:
@@ -39,13 +39,18 @@ private:
   static void *Entry(void *argument);
   static int TaskEntry(int argc, char *argv[]);
   void Loop();
-  void WaitUntil(uint64_t monotonicDeadline);
+  // Both helpers are called with _mutex held. WaitForWork releases it while waiting.
+  void WakeWorker();
+  void WaitForWork(uint64_t monotonicDeadline);
   const char *_name;
   int _priority;
   size_t _stackSize;
   pthread_mutex_t _mutex{};
-  pthread_cond_t _condition{};
-  clockid_t _conditionClock{CLOCK_REALTIME};
+  os::Semaphore _wake;
+  bool _wakePending{false};
+#ifdef CBOARD_NUTTX
+  pthread_cond_t _exitCondition{};
+#endif
   pthread_t _thread{};
   int _taskId{-1};
   bool _workerExited{false};

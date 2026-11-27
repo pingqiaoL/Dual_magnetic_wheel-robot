@@ -18,6 +18,9 @@ foreach ($command in @('set +e', 'source /etc/init.d/rc.autostart',
         throw "rcS is missing command: $command"
     }
 }
+if ($rcS -notmatch '(?ms)^thickness_control start[ \t]*\r?$.*?^command start[ \t]*\r?$') {
+    throw 'rcS must start thickness_control before command.'
+}
 $selector = Get-Content -LiteralPath (
     Join-Path $projectRoot 'startup\etc\init.d\rc.autostart') -Raw
 foreach ($command in @('param compare SYS_AUTOSTART 1',
@@ -34,7 +37,7 @@ if ($profile -notmatch 'param set CA_AIRFRAME 1') {
 $runtime = Get-Content -LiteralPath (
     Join-Path $projectRoot 'robot\modules\robot_runtime\RobotRuntime.cpp') -Raw
 foreach ($module in @('RcUpdate', 'SbusInput', 'Failsafe', 'RobotControl',
-        'ControlAllocator', 'CanOutput', 'Command')) {
+        'ControlAllocator', 'CanOutput', 'Command', 'ThicknessControl')) {
     if ($runtime -notmatch [regex]::Escape("$module::is_running()")) {
         throw "robot ready does not verify module: $module"
     }
@@ -123,7 +126,7 @@ g++ -std=c++14 -Wall -Wextra -Werror \
   robot/control/ActuatorEffectivenessDualMagneticWheel.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
-  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  robot/os/Mutex.cpp robot/os/Clock.cpp robot/os/Semaphore.cpp -pthread \
   -o build/tests/output_chain_test.exe
 ./build/tests/output_chain_test.exe
 
@@ -134,7 +137,7 @@ g++ -std=c++14 -Wall -Wextra -Werror \
   robot/modules/robot_control/RobotControl.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
-  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  robot/os/Mutex.cpp robot/os/Clock.cpp robot/os/Semaphore.cpp -pthread \
   -o build/tests/failsafe_test.exe
 ./build/tests/failsafe_test.exe
 

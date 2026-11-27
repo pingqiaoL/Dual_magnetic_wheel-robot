@@ -267,11 +267,11 @@ void RcUpdate::processInput(const InputRc &input, uint64_t now)
   for (uint8_t switchIndex = 0;
        switchIndex < RcChannels::SWITCH_COUNT; ++switchIndex)
     {
-      const float value = functionValue(
-          channels,
-          static_cast<uint8_t>(RcChannels::FUNCTION_SWITCH_FIRST + switchIndex),
-          0.0f);
-      switches.positions[switchIndex] = rcSwitchPosition(value);
+      const int8_t channel = channels.function[RcChannels::FUNCTION_SWITCH_FIRST + switchIndex];
+      switches.positions[switchIndex] =
+          channel >= 0 && static_cast<uint8_t>(channel) < channels.channelCount
+              ? rcSwitchPosition(channels.channels[channel])
+              : ManualControlSwitches::POSITION_NONE;
     }
 
   _switchesPublication.publish(switches);

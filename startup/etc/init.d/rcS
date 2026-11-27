@@ -3,6 +3,7 @@
 set +e
 
 echo "Starting CBoard robot runtime"
+robot version
 robot start
 
 echo "Selecting numbered robot profile"
@@ -25,6 +26,12 @@ control_allocator start
 
 echo "Starting CAN output"
 can_output start -d /dev/can0
+
+echo "Starting thickness control"
+thickness_control start
+
+echo "Starting Orin serial link"
+cboard_link start
 
 echo "Starting RC safety management"
 command start

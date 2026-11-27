@@ -13,7 +13,7 @@ cd "$root"
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root" \
   tests/work_queue_test.cpp robot/work_queue/WorkItem.cpp robot/work_queue/ScheduledWorkItem.cpp robot/work_queue/WorkQueue.cpp \
   robot/work_queue/WorkQueueManager.cpp robot/work_queue/WorkQueueConfigurations.cpp \
-  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  robot/os/Mutex.cpp robot/os/Clock.cpp robot/os/Semaphore.cpp -pthread \
   -o build/tests/work_queue_test.exe
 ./build/tests/work_queue_test.exe
 g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
@@ -25,7 +25,7 @@ g++ -std=c++14 -Wall -Wextra -Werror -I"$root/build/generated" -I"$root" \
   robot/work_queue/WorkItem.cpp robot/work_queue/ScheduledWorkItem.cpp robot/work_queue/WorkQueue.cpp robot/work_queue/WorkQueueManager.cpp robot/work_queue/WorkQueueConfigurations.cpp \
   robot/params/ParamManager.cpp robot/params/ParamDefinitions.cpp \
   robot/params/ModuleParams.cpp robot/orb/Topics.cpp \
-  robot/os/Mutex.cpp robot/os/Clock.cpp -pthread \
+  robot/os/Mutex.cpp robot/os/Clock.cpp robot/os/Semaphore.cpp -pthread \
   -o build/tests/work_queue_modules_test.exe
 ./build/tests/work_queue_modules_test.exe
 '@

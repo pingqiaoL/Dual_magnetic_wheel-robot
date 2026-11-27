@@ -81,3 +81,9 @@ uorb::Topic<ActuatorArmed> &actuatorArmedTopic()
   static uorb::Topic<ActuatorArmed> topic;
   return topic;
 }
+
+uorb::Topic<ThicknessControlStatus> &thicknessControlStatusTopic()
+{
+  static uorb::Topic<ThicknessControlStatus> topic;
+  return topic;
+}

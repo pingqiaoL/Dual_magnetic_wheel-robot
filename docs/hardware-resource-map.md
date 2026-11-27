@@ -11,7 +11,8 @@ This map separates confirmed board wiring from planned software ownership. Conne
 | DM motor bus | CAN1 | TX PD1, RX PD0 | `can_output -b 1` | Planned primary bus |
 | Optional actuator bus | CAN2 | TX PB6, RX PB5 | `can_output -b 2` | Reserved |
 | PWM outputs 1-4 | TIM1 CH1-4 | PE9, PE11, PE13, PE14 | `pwm_output` | Confirmed board route |
-| PWM outputs 5-7 | TIM8 CH1-3 | PC6, PI6, PI7 | `pwm_output` | Confirmed board route |
+| PWM outputs 5-7 | TIM8 CH1-3 | PC6, PI6, PI7 | Board route | C5 is assigned to the work switch in robot firmware |
+| Work switch (J16 C5) | GPIO input | PC6 | `thickness_control` | Internal pull-up, active low |
 | RGB LED | GPIO | PH10, PH11, PH12 | BSP/user LED | Confirmed |
 | User key | GPIO input | PA0 | BSP/button test | Confirmed, active low |
 | Battery voltage | ADC | PF10 | `power_monitor` | Confirmed route; scale pending |

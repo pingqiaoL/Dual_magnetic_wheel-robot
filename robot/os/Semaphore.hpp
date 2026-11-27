@@ -36,6 +36,9 @@ public:
   /** 在指定毫秒数内等待信号量。 */
   bool waitFor(uint32_t timeoutMilliseconds);
 
+  /** 等待通知，直至单调时钟达到指定的微秒数。 */
+  bool waitUntil(uint64_t monotonicDeadlineUs);
+
 private:
   sem_t _semaphore;
 };

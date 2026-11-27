@@ -1,6 +1,6 @@
 /**
  * @file Mutex.hpp
- * @brief 声明互斥锁及其自动加解锁辅助类。
+ * @brief 使用POSIX标准的阻塞式互斥锁，封装操作系统提供的pthread_mutex_t
  */
 
 #pragma once
@@ -36,7 +36,9 @@ private:
   pthread_mutex_t _mutex;
 };
 
-/** @class LockGuard @brief 在作用域开始时加锁并在离开作用域时自动解锁。 */
+/** @class LockGuard 
+ * @brief 在作用域开始时加锁并在离开作用域时自动解锁。 RALL方式，资源获取即初始化
+ * */
 class LockGuard
 {
 public:

@@ -84,6 +84,18 @@ int main()
   ActuatorArmed armed{};
   waitFor([&] { return actuatorArmedTopic().copy(armed) && armed.armed; });
 
+  // An unmapped SF channel is invalid, whereas a real centered channel is MIDDLE.
+  ManualControlSwitches switches{};
+  assert(manualControlSwitchesTopic().copy(switches) &&
+         switches.positions[5] == ManualControlSwitches::POSITION_MIDDLE);
+  assert(params.set(params.find("RC_MAP_SW6"), static_cast<int32_t>(0)));
+  waitFor([&] {
+    input.timestamp = input.timestampLastSignal = os::Clock::nowMicroseconds();
+    (void)inputRcTopic().publish(input);
+    return manualControlSwitchesTopic().copy(switches) && switches.valid &&
+           switches.positions[5] == ManualControlSwitches::POSITION_NONE;
+  });
+
   // No further input: periodic fallback still detects loss and publishes zero.
   RobotControlSetpoint setpoint{};
   waitFor([&] { return robotControlSetpointTopic().copy(setpoint) &&
